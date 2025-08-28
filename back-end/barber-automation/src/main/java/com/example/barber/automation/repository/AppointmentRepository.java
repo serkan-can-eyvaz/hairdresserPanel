@@ -91,4 +91,25 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
      */
     @Query("SELECT a FROM Appointment a WHERE a.tenant.id = :tenantId AND a.status = 'COMPLETED' AND a.reminderSent = false AND a.endTime <= :beforeDate")
     List<Appointment> findCompletedAppointmentsWithoutReminder(@Param("tenantId") Long tenantId, @Param("beforeDate") LocalDateTime beforeDate);
+    
+    /**
+     * Belirli tarih aralığında belirli statüdeki randevuları getirme
+     */
+    List<Appointment> findByStartTimeBetweenAndStatus(LocalDateTime startTime, LocalDateTime endTime, Appointment.AppointmentStatus status);
+    
+    /**
+     * Belirli tarih aralığında belirli statüdeki randevuları sayma
+     */
+    long countByStartTimeBetweenAndStatus(LocalDateTime startTime, LocalDateTime endTime, Appointment.AppointmentStatus status);
+    
+    /**
+     * Hatırlatma gönderilmemiş belirli statüdeki randevuları getirme
+     */
+    List<Appointment> findByStartTimeBetweenAndStatusAndReminderSentFalse(LocalDateTime startTime, LocalDateTime endTime, Appointment.AppointmentStatus status);
+    
+    /**
+     * Kaçırılan randevuları bulma (belirli saatten önce başlayan ama hala pending/confirmed olan)
+     */
+    @Query("SELECT a FROM Appointment a WHERE a.startTime < :cutoffTime AND a.status IN ('PENDING', 'CONFIRMED')")
+    List<Appointment> findMissedAppointments(@Param("cutoffTime") LocalDateTime cutoffTime);
 }
