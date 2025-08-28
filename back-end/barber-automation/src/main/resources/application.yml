@@ -1,0 +1,142 @@
+spring:
+  application:
+    name: barber-automation
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/barber_booking
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  
+  # JPA/Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: public
+  
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: Europe/Istanbul
+  
+  # Mail Configuration (optional)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-here-make-it-very-long-and-secure}
+  expiration: 86400 # 24 hours in seconds
+
+# WhatsApp API Configuration
+whatsapp:
+  api:
+    url: ${WHATSAPP_API_URL:https://graph.facebook.com/v18.0}
+    token: ${WHATSAPP_ACCESS_TOKEN:}
+    webhook-verify-token: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN:your-webhook-verify-token}
+
+# OpenAI Configuration
+openai:
+  api:
+    key: ${OPENAI_API_KEY:}
+    url: https://api.openai.com/v1
+    model: gpt-3.5-turbo
+    max-tokens: 500
+    temperature: 0.7
+
+# Scheduling Configuration
+scheduling:
+  reminder:
+    enabled: true
+    cron: "0 0 9 * * ?" # Her gün saat 09:00'da çalışır
+  
+# Logging Configuration
+logging:
+  level:
+    com.example.barber: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Management Endpoints (Actuator)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+  
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  
+  h2:
+    console:
+      enabled: true
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  
+logging:
+  level:
+    com.example.barber: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
