@@ -71,10 +71,11 @@ public class Reminder {
     }
     
     public enum ReminderType {
-        FOLLOW_UP,        // Takip hatırlatması (30 gün sonra)
-        APPOINTMENT,      // Randevu hatırlatması (1 gün önce)
-        BIRTHDAY,         // Doğum günü hatırlatması
-        PROMOTION         // Promosyon/kampanya
+        FOLLOW_UP,             // Takip hatırlatması (30 gün sonra)
+        APPOINTMENT,           // Randevu hatırlatması (1 gün önce)
+        APPOINTMENT_REMINDER,  // Randevu hatırlatması alternatif isim
+        BIRTHDAY,              // Doğum günü hatırlatması
+        PROMOTION              // Promosyon/kampanya
     }
     
     // Constructors
@@ -114,6 +115,15 @@ public class Reminder {
         this.scheduledFor = scheduledFor;
     }
     
+    // Alias methods for test compatibility
+    public LocalDateTime getScheduledAt() {
+        return scheduledFor;
+    }
+    
+    public void setScheduledAt(LocalDateTime scheduledAt) {
+        this.scheduledFor = scheduledAt;
+    }
+    
     public ReminderStatus getStatus() {
         return status;
     }
@@ -128,6 +138,15 @@ public class Reminder {
     
     public void setType(ReminderType type) {
         this.type = type;
+    }
+    
+    // Alias methods for test compatibility
+    public ReminderType getReminderType() {
+        return type;
+    }
+    
+    public void setReminderType(ReminderType reminderType) {
+        this.type = reminderType;
     }
     
     public String getMessage() {
@@ -160,6 +179,15 @@ public class Reminder {
     
     public void setRetryCount(Integer retryCount) {
         this.retryCount = retryCount;
+    }
+    
+    // Alias methods for test compatibility
+    public Integer getAttemptCount() {
+        return retryCount;
+    }
+    
+    public void setAttemptCount(Integer attemptCount) {
+        this.retryCount = attemptCount;
     }
     
     public LocalDateTime getCreatedAt() {

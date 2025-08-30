@@ -46,10 +46,13 @@ public class TenantSetting {
     private Tenant tenant;
     
     public enum SettingType {
-        STRING,   // Metin
-        INTEGER,  // Sayı
-        BOOLEAN,  // True/False
-        JSON      // JSON formatında karmaşık ayarlar
+        STRING,           // Metin
+        INTEGER,          // Sayı
+        BOOLEAN,          // True/False
+        JSON,             // JSON formatında karmaşık ayarlar
+        BUSINESS_CONFIG,  // İş ayarları
+        NOTIFICATION,     // Bildirim ayarları
+        MESSAGE_TEMPLATE  // Mesaj şablonları
     }
     
     // Önceden tanımlı ayar anahtarları

@@ -82,6 +82,43 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     /**
      * Günlük gönderilen hatırlatma sayısı
      */
-    @Query("SELECT COUNT(r) FROM Reminder r WHERE r.tenant.id = :tenantId AND r.status = 'SENT' AND DATE(r.sentAt) = CURRENT_DATE")
+    @Query("SELECT COUNT(r) FROM Reminder r WHERE r.tenant.id = :tenantId AND r.status = 'SENT' AND CAST(r.sentAt AS DATE) = CURRENT_DATE()")
     long countTodaySentRemindersByTenantId(@Param("tenantId") Long tenantId);
+    
+    // Test'ler için eksik method'lar
+    
+    /**
+     * Tenant, status ve belirli tarihten önce
+     */
+    List<Reminder> findByTenantIdAndStatusAndScheduledForBefore(Long tenantId, Reminder.ReminderStatus status, LocalDateTime scheduledForBefore);
+    
+    /**
+     * Tenant ve müşteri id'sine göre - en yeni önce
+     */
+    List<Reminder> findByTenantIdAndCustomerIdOrderByCreatedAtDesc(Long tenantId, Long customerId);
+    
+    /**
+     * Appointment id ve tenant id'ye göre
+     */
+    List<Reminder> findByAppointmentIdAndTenantId(Long appointmentId, Long tenantId);
+    
+    /**
+     * Tenant, status ve tarih aralığı 
+     */
+    List<Reminder> findByTenantIdAndStatusAndScheduledForBetween(Long tenantId, Reminder.ReminderStatus status, LocalDateTime startDate, LocalDateTime endDate);
+    
+    /**
+     * Tenant ve reminder type'a göre
+     */
+    List<Reminder> findByTenantIdAndType(Long tenantId, Reminder.ReminderType type);
+    
+    /**
+     * Tenant, status ve retryCount'tan az olanlar
+     */
+    List<Reminder> findByTenantIdAndStatusAndRetryCountLessThan(Long tenantId, Reminder.ReminderStatus status, int retryCount);
+    
+    /**
+     * Tenant, status ve sentAt'tan sonra gönderilmiş olanlar
+     */
+    List<Reminder> findByTenantIdAndStatusAndSentAtAfter(Long tenantId, Reminder.ReminderStatus status, LocalDateTime sentAtAfter);
 }

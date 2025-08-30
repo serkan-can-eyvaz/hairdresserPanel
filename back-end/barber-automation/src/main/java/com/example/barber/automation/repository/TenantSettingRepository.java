@@ -70,4 +70,12 @@ public interface TenantSettingRepository extends JpaRepository<TenantSetting, Lo
      */
     @Query("SELECT ts FROM TenantSetting ts WHERE ts.tenant.id = :tenantId AND ts.settingKey LIKE 'whatsapp_%' ORDER BY ts.settingKey ASC")
     List<TenantSetting> findWhatsAppSettingsByTenantId(@Param("tenantId") Long tenantId);
+    
+    // Test'ler için eksik method'lar
+    
+    /**
+     * Tenant id ve setting value'da arama (büyük/küçük harf duyarsız)
+     */
+    @Query("SELECT ts FROM TenantSetting ts WHERE ts.tenant.id = :tenantId AND LOWER(ts.settingValue) LIKE LOWER(CONCAT('%', :value, '%'))")
+    List<TenantSetting> findByTenantIdAndSettingValueContainingIgnoreCase(@Param("tenantId") Long tenantId, @Param("value") String value);
 }

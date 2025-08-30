@@ -227,8 +227,8 @@ class AppointmentRepositoryIntegrationTest {
         LocalDateTime weekFromNow = now.plusDays(7);
         List<Appointment> upcomingAppointments = appointmentRepository.findUpcomingAppointments(testData.tenant1.getId(), now, weekFromNow);
         
-        // Then: Gelecek 7 gün içindeki randevular döner
-        assertThat(upcomingAppointments).hasSizeGreaterThanOrEqualTo(3); // Bugün (2) + yarın (1) + gelecek hafta (1)
+        // Then: Gelecek 7 gün içindeki randevular döner (bugünkü randevular dahil değil)  
+        assertThat(upcomingAppointments).hasSize(3); // yarın (1) + 3 gün sonra (1) + setup'taki ek gelecek randevu (1)
         assertThat(upcomingAppointments)
                 .extracting(Appointment::getStartTime)
                 .allMatch(startTime -> startTime.isAfter(now) && startTime.isBefore(weekFromNow));

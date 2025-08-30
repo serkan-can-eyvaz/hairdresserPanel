@@ -201,10 +201,10 @@ class MultiTenantDataIsolationTest {
                 .extracting(Service::getName)
                 .containsExactly("Saç C");
         
-        // Fiyat bilgileri de izole olmalı
-        assertThat(servicesA.get(0).getPrice()).isIn(new BigDecimal("100"), new BigDecimal("80"));
-        assertThat(servicesB.get(0).getPrice()).isIn(new BigDecimal("150"), new BigDecimal("120"));
-        assertThat(servicesC.get(0).getPrice()).isEqualTo(new BigDecimal("200"));
+        // Fiyat bilgileri de izole olmalı (Kuaför A: 100, 80 - Kuaför B: 150, 120 - Kuaför C: 200)
+        assertThat(servicesA.get(0).getPrice()).isIn(new BigDecimal("100.00"), new BigDecimal("80.00"));
+        assertThat(servicesB.get(0).getPrice()).isIn(new BigDecimal("150.00"), new BigDecimal("120.00"));
+        assertThat(servicesC.get(0).getPrice()).isEqualTo(new BigDecimal("200.00"));
     }
     
     @Test

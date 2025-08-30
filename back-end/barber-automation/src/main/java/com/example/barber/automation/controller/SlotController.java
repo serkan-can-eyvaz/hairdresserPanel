@@ -32,7 +32,7 @@ public class SlotController {
     /**
      * Belirli tarih ve hizmet için müsait slot'ları getir
      */
-    @GetMapping
+    @GetMapping("/daily")
     @Operation(summary = "Müsait slot'lar", description = "Belirtilen tarih ve hizmet için müsait saatleri getirir")
     public ResponseEntity<SlotResponse> getAvailableSlots(
             @Parameter(description = "Kuaför ID'si") @PathVariable Long tenantId,
@@ -46,7 +46,7 @@ public class SlotController {
     /**
      * Gelecek 7 gün için müsait slot'ları getir
      */
-    @GetMapping("/week")
+    @GetMapping("/weekly")
     @Operation(summary = "Haftalık müsait slot'lar", description = "Gelecek 7 gün için müsait saatleri getirir")
     public ResponseEntity<List<SlotResponse>> getAvailableSlotsForWeek(
             @Parameter(description = "Kuaför ID'si") @PathVariable Long tenantId,
@@ -58,21 +58,22 @@ public class SlotController {
     /**
      * Slot müsaitlik kontrolü
      */
-    @GetMapping("/check")
+    @PostMapping("/check")
     @Operation(summary = "Slot müsaitlik kontrolü", description = "Belirtilen zaman diliminin müsait olup olmadığını kontrol eder")
-    public ResponseEntity<Boolean> checkSlotAvailability(
+    public ResponseEntity<SlotCheckResponse> checkSlotAvailability(
             @Parameter(description = "Kuaför ID'si") @PathVariable Long tenantId,
-            @Parameter(description = "Hizmet ID'si") @RequestParam Long serviceId,
-            @Parameter(description = "Başlangıç zamanı (yyyy-MM-dd'T'HH:mm:ss)") 
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime) {
-        boolean isAvailable = slotService.isSlotAvailable(tenantId, serviceId, startTime);
-        return ResponseEntity.ok(isAvailable);
+            @Parameter(description = "Slot kontrolü bilgileri") @RequestBody SlotCheckRequest request) {
+        boolean isAvailable = slotService.isSlotAvailable(tenantId, request.getServiceId(), request.getStartTime());
+        SlotCheckResponse response = new SlotCheckResponse();
+        response.setAvailable(isAvailable);
+        response.setStartTime(request.getStartTime());
+        return ResponseEntity.ok(response);
     }
     
     /**
      * WhatsApp bot için müsait saatleri metin formatında getir
      */
-    @GetMapping("/whatsapp")
+    @GetMapping("/whatsapp-format")
     @Operation(summary = "WhatsApp için müsait slot'lar", 
                description = "WhatsApp bot için formatlanmış müsait saatleri getirir")
     public ResponseEntity<String> getAvailableSlotsForWhatsApp(
@@ -81,6 +82,32 @@ public class SlotController {
             @Parameter(description = "Tarih (yyyy-MM-dd)") 
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         String formattedSlots = slotService.getAvailableSlotsForWhatsApp(tenantId, serviceId, date);
-        return ResponseEntity.ok(formattedSlots);
+        return ResponseEntity.ok().contentType(org.springframework.http.MediaType.TEXT_PLAIN).body(formattedSlots);
+    }
+
+    /**
+     * Slot kontrol request DTO
+     */
+    public static class SlotCheckRequest {
+        private Long serviceId;
+        private LocalDateTime startTime;
+
+        public Long getServiceId() { return serviceId; }
+        public void setServiceId(Long serviceId) { this.serviceId = serviceId; }
+        public LocalDateTime getStartTime() { return startTime; }
+        public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
+    }
+
+    /**
+     * Slot kontrol response DTO
+     */
+    public static class SlotCheckResponse {
+        private Boolean available;
+        private LocalDateTime startTime;
+
+        public Boolean getAvailable() { return available; }
+        public void setAvailable(Boolean available) { this.available = available; }
+        public LocalDateTime getStartTime() { return startTime; }
+        public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
     }
 }

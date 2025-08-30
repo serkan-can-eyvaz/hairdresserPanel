@@ -161,7 +161,8 @@ public class AppointmentController {
     public ResponseEntity<AppointmentDto> cancelAppointment(
             @Parameter(description = "Kuaför ID'si") @PathVariable Long tenantId,
             @Parameter(description = "Randevu ID'si") @PathVariable Long id,
-            @Parameter(description = "İptal nedeni") @RequestParam(required = false) String reason) {
+            @Parameter(description = "İptal nedeni") @RequestBody(required = false) java.util.Map<String, String> cancelRequest) {
+        String reason = cancelRequest != null ? cancelRequest.get("reason") : null;
         try {
             AppointmentDto cancelledAppointment = appointmentService.cancelAppointment(id, tenantId, reason);
             return ResponseEntity.ok(cancelledAppointment);

@@ -54,7 +54,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     /**
      * Bugünkü randevuları getirme
      */
-    @Query("SELECT a FROM Appointment a WHERE a.tenant.id = :tenantId AND DATE(a.startTime) = CURRENT_DATE ORDER BY a.startTime ASC")
+    @Query("SELECT a FROM Appointment a WHERE a.tenant.id = :tenantId AND CAST(a.startTime AS DATE) = CURRENT_DATE() ORDER BY a.startTime ASC")
     List<Appointment> findTodayAppointments(@Param("tenantId") Long tenantId);
     
     /**
@@ -112,4 +112,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
      */
     @Query("SELECT a FROM Appointment a WHERE a.startTime < :cutoffTime AND a.status IN ('PENDING', 'CONFIRMED')")
     List<Appointment> findMissedAppointments(@Param("cutoffTime") LocalDateTime cutoffTime);
+    
+    /**
+     * Belirli tarih aralığındaki randevu sayısı
+     */
+    long countByStartTimeBetween(LocalDateTime startDateTime, LocalDateTime endDateTime);
+    
+    /**
+     * Tenant ve tarih aralığına göre randevu sayısı
+     */
+    long countByTenantIdAndStartTimeBetween(Long tenantId, LocalDateTime startDateTime, LocalDateTime endDateTime);
+    
+    /**
+     * Tenant'a ait toplam randevu sayısı
+     */
+    long countByTenantId(Long tenantId);
 }

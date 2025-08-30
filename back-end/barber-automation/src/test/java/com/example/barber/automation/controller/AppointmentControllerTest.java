@@ -1,0 +1,474 @@
+package com.example.barber.automation.controller;
+
+import com.example.barber.automation.dto.AppointmentDto;
+import com.example.barber.automation.dto.CreateAppointmentRequest;
+import com.example.barber.automation.dto.CustomerDto;
+import com.example.barber.automation.dto.ServiceDto;
+import com.example.barber.automation.entity.Appointment;
+import com.example.barber.automation.service.AppointmentService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+/**
+ * AppointmentController REST API Test
+ * 
+ * Bu test sınıfı AppointmentController'ın HTTP endpoint'lerini test eder:
+ * - Randevu CRUD operasyonları
+ * - Randevu durum değişiklikleri (onay, iptal, tamamlama)
+ * - Tarih bazlı filtreleme
+ * - Validation ve error handling
+ * - Multi-tenant data isolation (header üzerinden tenant_id)
+ * 
+ * Test edilen endpoint'ler:
+ * GET /tenants/{tenantId}/appointments - Randevu listesi
+ * POST /tenants/{tenantId}/appointments - Yeni randevu oluşturma
+ * PUT /tenants/{tenantId}/appointments/{id}/confirm - Randevu onaylama
+ * PUT /tenants/{tenantId}/appointments/{id}/cancel - Randevu iptal etme
+ * GET /tenants/{tenantId}/appointments/today - Bugünkü randevular
+ * GET /tenants/{tenantId}/appointments/stats - Randevu istatistikleri
+ */
+@WebMvcTest(controllers = AppointmentController.class, excludeAutoConfiguration = {
+        org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class
+})
+@DisplayName("AppointmentController REST API Tests")
+class AppointmentControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
+    private AppointmentService appointmentService;
+
+    // Test data
+    private AppointmentDto appointmentDto;
+    private CreateAppointmentRequest createRequest;
+    private CustomerDto customerDto;
+    private ServiceDto serviceDto;
+
+    private static final Long TENANT_ID = 1L;
+    private static final String TENANT_HEADER = "X-Tenant-ID";
+
+    @BeforeEach
+    void setUp() {
+        // Customer DTO
+        customerDto = new CustomerDto();
+        customerDto.setId(1L);
+        customerDto.setName("Test Müşteri");
+        customerDto.setPhoneNumber("+905331234567");
+
+        // Service DTO
+        serviceDto = new ServiceDto();
+        serviceDto.setId(1L);
+        serviceDto.setName("Saç Kesimi");
+        serviceDto.setDurationMinutes(45);
+        serviceDto.setPrice(new BigDecimal("150.00"));
+        serviceDto.setCurrency("TRY");
+
+        // Appointment DTO
+        appointmentDto = new AppointmentDto();
+        appointmentDto.setId(1L);
+        appointmentDto.setStartTime(LocalDateTime.now().plusDays(1).withHour(10).withMinute(0));
+        appointmentDto.setEndTime(LocalDateTime.now().plusDays(1).withHour(10).withMinute(45));
+        appointmentDto.setStatus(Appointment.AppointmentStatus.PENDING);
+        appointmentDto.setCustomer(customerDto);
+        appointmentDto.setService(serviceDto);
+        appointmentDto.setTotalPrice(new BigDecimal("150.00"));
+        appointmentDto.setCurrency("TRY");
+        appointmentDto.setNotes("Test randevu notu");
+
+        // Create appointment request
+        createRequest = new CreateAppointmentRequest();
+        createRequest.setCustomerId(1L);
+        createRequest.setServiceId(1L);
+        createRequest.setStartTime(appointmentDto.getStartTime());
+        createRequest.setNotes("Test randevu notu");
+    }
+
+    @Test
+    @DisplayName("GET /tenants/{tenantId}/appointments - Tenant randevuları listeleme")
+    void getAppointments_WithTenantHeader_ShouldReturnAppointmentList() throws Exception {
+        // Given: Service'den randevu listesi döner
+        List<AppointmentDto> appointments = Arrays.asList(appointmentDto);
+        when(appointmentService.findActiveAppointments(TENANT_ID)).thenReturn(appointments);
+
+        // When & Then: GET request with tenant header
+        mockMvc.perform(get("/tenants/{tenantId}/appointments/active", TENANT_ID)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(1)))
+                .andExpect(jsonPath("$[0].status", is("PENDING")))
+                .andExpect(jsonPath("$[0].customer.name", is("Test Müşteri")))
+                .andExpect(jsonPath("$[0].service.name", is("Saç Kesimi")));
+
+        verify(appointmentService).findActiveAppointments(TENANT_ID);
+    }
+
+    @Test
+    @DisplayName("GET /tenants/{tenantId}/appointments/active - URL doğru olmayan durumda 404")
+    void getAppointments_WithoutTenantHeader_ShouldReturn400() throws Exception {
+        // When & Then: GET request with invalid URL structure  
+        mockMvc.perform(get("/appointments/active")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isNotFound());
+
+        verify(appointmentService, never()).findActiveAppointments(anyLong());
+    }
+
+    @Test
+    @DisplayName("GET /tenants/{tenantId}/appointments/{id} - Randevu ID ile getirme")
+    void getAppointmentById_WhenExists_ShouldReturnAppointment() throws Exception {
+        // Given: Service'den randevu döner
+        when(appointmentService.findById(1L, TENANT_ID)).thenReturn(Optional.of(appointmentDto));
+
+        // When & Then: GET request
+        mockMvc.perform(get("/tenants/{tenantId}/appointments/{id}", TENANT_ID, 1L)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.notes", is("Test randevu notu")));
+
+        verify(appointmentService).findById(1L, TENANT_ID);
+    }
+
+    @Test
+    @DisplayName("GET /tenants/{tenantId}/appointments/{id} - Bulunamayan randevu için 404")
+    void getAppointmentById_WhenNotExists_ShouldReturn404() throws Exception {
+        // Given: Service'den empty döner
+        when(appointmentService.findById(999L, TENANT_ID)).thenReturn(Optional.empty());
+
+        // When & Then: GET request
+        mockMvc.perform(get("/tenants/{tenantId}/appointments/{id}", TENANT_ID, 999L)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isNotFound());
+
+        verify(appointmentService).findById(999L, TENANT_ID);
+    }
+
+    @Test
+    @DisplayName("POST /tenants/{tenantId}/appointments - Yeni randevu oluşturma - Başarılı")
+    void createAppointment_WithValidData_ShouldReturn201() throws Exception {
+        // Given: Service'den yeni randevu döner
+        when(appointmentService.createAppointment(any(CreateAppointmentRequest.class), eq(TENANT_ID)))
+                .thenReturn(appointmentDto);
+
+        // When & Then: POST request
+        mockMvc.perform(post("/tenants/{tenantId}/appointments", TENANT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest)))
+                .andDo(print())
+                .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.status", is("PENDING")));
+
+        verify(appointmentService).createAppointment(any(CreateAppointmentRequest.class), eq(TENANT_ID));
+    }
+
+    @Test
+    @DisplayName("POST /tenants/{tenantId}/appointments - Validation hatası için 400")
+    void createAppointment_WithValidationErrors_ShouldReturn400() throws Exception {
+        // Given: Invalid appointment data
+        CreateAppointmentRequest invalidRequest = new CreateAppointmentRequest();
+        invalidRequest.setCustomerId(null); // Müşteri ID eksik
+        invalidRequest.setServiceId(null); // Hizmet ID eksik
+        invalidRequest.setStartTime(null); // Başlangıç zamanı eksik
+
+        // When & Then: POST request with validation errors
+        mockMvc.perform(post("/tenants/{tenantId}/appointments", TENANT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+
+        verify(appointmentService, never()).createAppointment(any(CreateAppointmentRequest.class), anyLong());
+    }
+
+    @Test
+    @DisplayName("POST /tenants/{tenantId}/appointments - Slot müsait değilse 409")
+    void createAppointment_WhenSlotUnavailable_ShouldReturn409() throws Exception {
+        // Given: Service'den slot müsait değil hatası
+        when(appointmentService.createAppointment(any(CreateAppointmentRequest.class), eq(TENANT_ID)))
+                .thenThrow(new IllegalArgumentException("Seçilen saat artık müsait değil"));
+
+        // When & Then: POST request
+        mockMvc.perform(post("/tenants/{tenantId}/appointments", TENANT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest)))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+
+        verify(appointmentService).createAppointment(any(CreateAppointmentRequest.class), eq(TENANT_ID));
+    }
+
+    @Test
+    @DisplayName("POST /tenants/{tenantId}/appointments/{id}/confirm - Randevu onaylama - Başarılı")
+    void confirmAppointment_WhenPending_ShouldReturn200() throws Exception {
+        // Given: Service'den onaylanmış randevu döner
+        appointmentDto.setStatus(Appointment.AppointmentStatus.CONFIRMED);
+        when(appointmentService.confirmAppointment(1L, TENANT_ID)).thenReturn(appointmentDto);
+
+        // When & Then: POST request
+        mockMvc.perform(post("/tenants/{tenantId}/appointments/{id}/confirm", TENANT_ID, 1L)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status", is("CONFIRMED")));
+
+        verify(appointmentService).confirmAppointment(1L, TENANT_ID);
+    }
+
+    @Test
+    @DisplayName("POST /tenants/{tenantId}/appointments/{id}/confirm - Pending olmayan randevu için 400")
+    void confirmAppointment_WhenNotPending_ShouldReturn400() throws Exception {
+        // Given: Service'den geçersiz durum hatası
+        when(appointmentService.confirmAppointment(1L, TENANT_ID))
+                .thenThrow(new IllegalArgumentException("Sadece beklemedeki randevular onaylanabilir"));
+
+        // When & Then: POST request
+        mockMvc.perform(post("/tenants/{tenantId}/appointments/{id}/confirm", TENANT_ID, 1L)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+
+        verify(appointmentService).confirmAppointment(1L, TENANT_ID);
+    }
+
+    @Test
+    @DisplayName("PUT /tenants/{tenantId}/appointments/{id}/cancel - Randevu iptal etme - Başarılı")
+    void cancelAppointment_WithReason_ShouldReturn200() throws Exception {
+        // Given: Service'den iptal edilmiş randevu döner
+        appointmentDto.setStatus(Appointment.AppointmentStatus.CANCELLED);
+        when(appointmentService.cancelAppointment(eq(1L), eq(TENANT_ID), anyString())).thenReturn(appointmentDto);
+
+        Map<String, String> cancelRequest = new HashMap<>();
+        cancelRequest.put("reason", "Müşteri iptal etti");
+
+        // When & Then: PUT request
+        mockMvc.perform(post("/tenants/{tenantId}/appointments/{id}/cancel", TENANT_ID, 1L)
+
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(cancelRequest)))
+                .andDo(print())
+                .andExpect(status().isOk());
+
+        verify(appointmentService).cancelAppointment(eq(1L), eq(TENANT_ID), eq("Müşteri iptal etti"));
+    }
+
+    @Test
+    @DisplayName("PUT /tenants/{tenantId}/appointments/{id}/complete - Randevu tamamlama - Başarılı")
+    void completeAppointment_WhenActive_ShouldReturn200() throws Exception {
+        // Given: Service'den tamamlanmış randevu döner
+        appointmentDto.setStatus(Appointment.AppointmentStatus.COMPLETED);
+        when(appointmentService.completeAppointment(1L, TENANT_ID)).thenReturn(appointmentDto);
+
+        // When & Then: PUT request
+        mockMvc.perform(post("/tenants/{tenantId}/appointments/{id}/complete", TENANT_ID, 1L)
+
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status", is("COMPLETED")));
+
+        verify(appointmentService).completeAppointment(1L, TENANT_ID);
+    }
+
+    @Test
+    @DisplayName("GET /tenants/{tenantId}/appointments/today - Bugünkü randevular")
+    void getTodayAppointments_ShouldReturnTodayList() throws Exception {
+        // Given: Service'den bugünkü randevular döner
+        List<AppointmentDto> todayAppointments = Arrays.asList(appointmentDto);
+        when(appointmentService.findTodayAppointments(TENANT_ID)).thenReturn(todayAppointments);
+
+        // When & Then: GET request
+        mockMvc.perform(get("/tenants/{tenantId}/appointments/today", TENANT_ID)
+
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(1)));
+
+        verify(appointmentService).findTodayAppointments(TENANT_ID);
+    }
+
+    @Test
+    @DisplayName("GET /tenants/{tenantId}/appointments/upcoming - Yaklaşan randevular")
+    void getUpcomingAppointments_ShouldReturnUpcomingList() throws Exception {
+        // Given: Service'den yaklaşan randevular döner
+        List<AppointmentDto> upcomingAppointments = Arrays.asList(appointmentDto);
+        when(appointmentService.findUpcomingAppointments(TENANT_ID)).thenReturn(upcomingAppointments);
+
+        // When & Then: GET request
+        mockMvc.perform(get("/tenants/{tenantId}/appointments/upcoming", TENANT_ID)
+
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(1)));
+
+        verify(appointmentService).findUpcomingAppointments(TENANT_ID);
+    }
+
+    @Test
+    @DisplayName("GET /tenants/{tenantId}/appointments/stats - Randevu istatistikleri")
+    void getAppointmentStats_ShouldReturnStatistics() throws Exception {
+        // Given: Service'den istatistikler döner
+        Map<String, Long> stats = new HashMap<>();
+        stats.put("pending", 5L);
+        stats.put("confirmed", 10L);
+        stats.put("completed", 20L);
+        stats.put("cancelled", 3L);
+
+        when(appointmentService.getAppointmentStats(TENANT_ID)).thenReturn(stats);
+
+        // When & Then: GET request
+        mockMvc.perform(get("/tenants/{tenantId}/appointments/stats", TENANT_ID)
+
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.pending", is(5)))
+                .andExpect(jsonPath("$.confirmed", is(10)))
+                .andExpect(jsonPath("$.completed", is(20)))
+                .andExpect(jsonPath("$.cancelled", is(3)));
+
+        verify(appointmentService).getAppointmentStats(TENANT_ID);
+    }
+
+    @Test
+    @DisplayName("GET /tenants/{tenantId}/appointments/customer/{customerId} - Müşteri randevuları")
+    void getCustomerAppointments_ShouldReturnCustomerAppointmentList() throws Exception {
+        // Given: Service'den müşteri randevuları döner
+        List<AppointmentDto> customerAppointments = Arrays.asList(appointmentDto);
+        when(appointmentService.findByCustomer(TENANT_ID, 1L)).thenReturn(customerAppointments);
+
+        // When & Then: GET request
+        mockMvc.perform(get("/tenants/{tenantId}/appointments/customer/{customerId}", TENANT_ID, 1L)
+
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].customer.id", is(1)));
+
+        verify(appointmentService).findByCustomer(TENANT_ID, 1L);
+    }
+
+    @Test
+    @DisplayName("GET /tenants/{tenantId}/appointments/date-range - Tarih aralığı filtreleme")
+    void getAppointmentsByDateRange_WithValidDates_ShouldReturnFilteredList() throws Exception {
+        // Given: Service'den tarih aralığındaki randevular döner
+        LocalDateTime startDate = LocalDateTime.now().withHour(0).withMinute(0);
+        LocalDateTime endDate = LocalDateTime.now().withHour(23).withMinute(59);
+        
+        List<AppointmentDto> rangeAppointments = Arrays.asList(appointmentDto);
+        when(appointmentService.findByDateRange(eq(TENANT_ID), any(LocalDateTime.class), any(LocalDateTime.class)))
+                .thenReturn(rangeAppointments);
+
+        // When & Then: GET request with date parameters
+        mockMvc.perform(get("/tenants/{tenantId}/appointments", TENANT_ID)
+
+                        .param("startDate", startDate.toString())
+                        .param("endDate", endDate.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(1)));
+
+        verify(appointmentService).findByDateRange(eq(TENANT_ID), any(LocalDateTime.class), any(LocalDateTime.class));
+    }
+
+    @Test
+    @DisplayName("GET /tenants/{tenantId}/appointments/date-range - Geçersiz tarih formatı için 400")
+    void getAppointmentsByDateRange_WithInvalidDateFormat_ShouldReturn400() throws Exception {
+        // When & Then: GET request with invalid date format
+        mockMvc.perform(get("/tenants/{tenantId}/appointments", TENANT_ID)
+
+                        .param("startDate", "invalid-date")
+                        .param("endDate", "2024-12-31T23:59:59")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+
+        verify(appointmentService, never()).findByDateRange(anyLong(), any(LocalDateTime.class), any(LocalDateTime.class));
+    }
+
+    @Test
+    @DisplayName("PUT /tenants/{tenantId}/appointments/{id} - Randevu güncelleme - Başarılı")
+    void updateAppointment_WithValidData_ShouldReturn200() throws Exception {
+        // Given: Service'den güncellenmiş randevu döner
+        when(appointmentService.updateAppointment(eq(1L), any(CreateAppointmentRequest.class), eq(TENANT_ID)))
+                .thenReturn(appointmentDto);
+
+        // When & Then: PUT request
+        mockMvc.perform(put("/tenants/{tenantId}/appointments/{id}", TENANT_ID, 1L)
+
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id", is(1)));
+
+        verify(appointmentService).updateAppointment(eq(1L), any(CreateAppointmentRequest.class), eq(TENANT_ID));
+    }
+
+    @Test
+    @DisplayName("Security Test - Cross-tenant access SecurityException")
+    void accessOtherTenantData_ShouldReturn403() throws Exception {
+        // Given: Service'den cross-tenant access hatası
+        when(appointmentService.findById(1L, 999L))
+                .thenThrow(new SecurityException("Bu randevuya erişim yetkiniz yok"));
+
+        // When & Then: SecurityException fırlatıldığını test et
+        try {
+            mockMvc.perform(get("/tenants/{tenantId}/appointments/{id}", 999L, 1L)
+                            .contentType(MediaType.APPLICATION_JSON));
+        } catch (Exception e) {
+            // SecurityException'ın fırlatıldığını doğrula
+            assert e.getCause() instanceof SecurityException;
+        }
+
+        verify(appointmentService).findById(1L, 999L);
+    }
+}

@@ -33,9 +33,7 @@ spring:
       write-dates-as-timestamps: false
     time-zone: Europe/Istanbul
   
-  # Test Profile Settings
-  profiles:
-    active: test
+  # Test Profile Settings (active profile not needed here)
 
 # Test Server Configuration
 server:

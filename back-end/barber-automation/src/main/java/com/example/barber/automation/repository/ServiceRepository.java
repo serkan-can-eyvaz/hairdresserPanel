@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,4 +58,50 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
      */
     @Query("SELECT s FROM Service s LEFT JOIN s.appointments a WHERE s.tenant.id = :tenantId AND s.active = true GROUP BY s ORDER BY COUNT(a) DESC")
     List<Service> findMostPopularServicesByTenantId(@Param("tenantId") Long tenantId);
+    
+    /**
+     * Aktif hizmetler sort order'a göre sıralı
+     */
+    List<Service> findByTenantIdAndActiveTrueOrderBySortOrder(Long tenantId);
+    
+    /**
+     * İsme göre hizmet arama (alternatif method signature)
+     */
+    @Query("SELECT s FROM Service s WHERE s.tenant.id = :tenantId AND LOWER(s.name) LIKE LOWER(CONCAT('%', :name, '%')) AND s.active = true ORDER BY s.sortOrder ASC, s.name ASC")
+    List<Service> findByNameContainingIgnoreCaseAndTenantIdAndActiveTrue(@Param("name") String name, @Param("tenantId") Long tenantId);
+    
+    /**
+     * Süre aralığına göre hizmet filtreleme
+     */
+    @Query("SELECT s FROM Service s WHERE s.tenant.id = :tenantId AND s.active = true AND s.durationMinutes BETWEEN :minDuration AND :maxDuration ORDER BY s.durationMinutes ASC")
+    List<Service> findByTenantIdAndActiveTrueAndDurationMinutesBetween(@Param("tenantId") Long tenantId, @Param("minDuration") Integer minDuration, @Param("maxDuration") Integer maxDuration);
+    
+    /**
+     * Fiyat aralığına göre hizmet filtreleme
+     */
+    @Query("SELECT s FROM Service s WHERE s.tenant.id = :tenantId AND s.active = true AND s.price BETWEEN :minPrice AND :maxPrice ORDER BY s.price ASC")
+    List<Service> findByTenantIdAndActiveTrueAndPriceBetween(@Param("tenantId") Long tenantId, @Param("minPrice") BigDecimal minPrice, @Param("maxPrice") BigDecimal maxPrice);
+    
+    /**
+     * En yüksek sort order bulma
+     */
+    @Query("SELECT MAX(s.sortOrder) FROM Service s WHERE s.tenant.id = :tenantId AND s.active = true")
+    Integer findMaxSortOrderByTenantIdAndActiveTrue(@Param("tenantId") Long tenantId);
+    
+    /**
+     * Hizmet adı benzersizlik kontrolü (aktif olanlar)
+     */
+    boolean existsByNameAndTenantIdAndActiveTrue(String name, Long tenantId);
+    
+    /**
+     * Hızlı hizmetler (belirtilen süreden kısa)
+     */
+    @Query("SELECT s FROM Service s WHERE s.tenant.id = :tenantId AND s.active = true AND s.durationMinutes < :maxDuration ORDER BY s.durationMinutes ASC")
+    List<Service> findByTenantIdAndActiveTrueAndDurationMinutesLessThan(@Param("tenantId") Long tenantId, @Param("maxDuration") Integer maxDuration);
+    
+    /**
+     * Ortalama fiyat hesaplama
+     */
+    @Query("SELECT AVG(s.price) FROM Service s WHERE s.tenant.id = :tenantId AND s.active = true")
+    Double findAveragePriceByTenantIdAndActiveTrue(@Param("tenantId") Long tenantId);
 }

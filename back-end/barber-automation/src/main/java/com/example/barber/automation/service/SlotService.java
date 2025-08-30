@@ -88,11 +88,15 @@ public class SlotService {
                     continue;
                 }
                 
+                // Lambda için final variable
+                final LocalDateTime finalCurrentTime = currentTime;
+                final LocalDateTime finalSlotEnd = slotEnd;
+                
                 // Mevcut randevularla çakışma kontrolü
                 boolean isAvailable = existingAppointments.stream()
                         .noneMatch(appointment -> 
-                            appointment.getStartTime().isBefore(slotEnd) && 
-                            appointment.getEndTime().isAfter(currentTime));
+                            appointment.getStartTime().isBefore(finalSlotEnd) && 
+                            appointment.getEndTime().isAfter(finalCurrentTime));
                 
                 if (isAvailable) {
                     availableSlots.add(new SlotResponse.TimeSlot(currentTime, slotEnd, true));

@@ -51,4 +51,19 @@ public interface TenantRepository extends JpaRepository<Tenant, Long> {
      */
     @Query("SELECT COUNT(t) FROM Tenant t WHERE t.active = true")
     long countActiveTenants();
+    
+    /**
+     * Aktif kuaför sayısı (Spring Data method naming ile)
+     */
+    long countByActiveTrue();
+    
+    /**
+     * Telefon numarası varlığını kontrol etme
+     */
+    boolean existsByPhoneNumber(String phoneNumber);
+    
+    /**
+     * Aktif kuaförleri oluşturulma tarihine göre sıralı getirme
+     */
+    List<Tenant> findByActiveTrueOrderByCreatedAtDesc();
 }

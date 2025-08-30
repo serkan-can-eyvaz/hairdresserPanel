@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * TenantRepository Integration Test
@@ -130,7 +131,7 @@ class TenantRepositoryIntegrationTest {
     @DisplayName("Email ile aktif kuaför bulma")
     void findByEmailAndActiveTrue_WhenExists_ShouldReturnTenant() {
         // Given: Kayıtlı bir email adresi
-        String email = "kuafora@test.com";
+        String email = "kuaföra@test.com";
         
         // When: Email ile arama yapılır
         Optional<Tenant> result = tenantRepository.findByEmailAndActiveTrue(email);
@@ -172,7 +173,7 @@ class TenantRepositoryIntegrationTest {
     @DisplayName("Email tekrar kontrolü - Kendisi hariç")
     void existsByEmailAndIdNot_WhenDifferentTenant_ShouldReturnTrue() {
         // Given: Başka bir kuaförün email adresi
-        String email = "kuaforb@test.com";
+        String email = "kuaförb@test.com";
         Long currentTenantId = testTenant1.getId();
         
         // When: Email tekrar kontrolü yapılır
@@ -199,12 +200,17 @@ class TenantRepositoryIntegrationTest {
         Tenant duplicateTenant = TestDataBuilder.createTestTenant("Duplicate Kuaför", "+905321111111");
         
         // When & Then: Unique constraint violation beklenir
-        try {
-            entityManager.persistAndFlush(duplicateTenant);
-        } catch (Exception e) {
-            // Database constraint violation beklenir
-            assertThat(e).hasMessageContaining("unique").or().hasMessageContaining("constraint");
-        }
+        assertThatThrownBy(() -> entityManager.persistAndFlush(duplicateTenant))
+                .isInstanceOf(Exception.class)
+                .satisfies(e -> {
+                    String message = e.getMessage().toLowerCase();
+                    assertThat(message)
+                            .satisfiesAnyOf(
+                                    msg -> assertThat(msg).contains("unique"),
+                                    msg -> assertThat(msg).contains("constraint"),
+                                    msg -> assertThat(msg).contains("duplicate")
+                            );
+                });
     }
     
     @Test

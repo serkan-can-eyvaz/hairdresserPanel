@@ -27,6 +27,11 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     List<Customer> findByTenantIdAndActiveTrueOrderByNameAsc(Long tenantId);
     
     /**
+     * Tenant'a ait aktif müşterileri listeleme (basit)
+     */
+    List<Customer> findByTenantIdAndActiveTrue(Long tenantId);
+    
+    /**
      * Tenant'a ait belirli bir müşteriyi bulma
      */
     Optional<Customer> findByIdAndTenantId(Long id, Long tenantId);
@@ -36,6 +41,12 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
      */
     @Query("SELECT c FROM Customer c WHERE c.tenant.id = :tenantId AND LOWER(c.name) LIKE LOWER(CONCAT('%', :name, '%')) AND c.active = true ORDER BY c.name ASC")
     List<Customer> findByTenantIdAndNameContainingIgnoreCaseAndActiveTrue(@Param("tenantId") Long tenantId, @Param("name") String name);
+    
+    /**
+     * İsme göre müşteri arama (alternatif method signature)
+     */
+    @Query("SELECT c FROM Customer c WHERE c.tenant.id = :tenantId AND LOWER(c.name) LIKE LOWER(CONCAT('%', :name, '%')) AND c.active = true ORDER BY c.name ASC")
+    List<Customer> findByNameContainingIgnoreCaseAndTenantIdAndActiveTrue(@Param("name") String name, @Param("tenantId") Long tenantId);
     
     /**
      * Belirli tarihten sonra randevusu olan müşteriler
@@ -70,4 +81,29 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
      */
     @Query("SELECT c FROM Customer c WHERE c.tenant.id = :tenantId AND c.active = true AND c.createdAt >= :since ORDER BY c.createdAt DESC")
     List<Customer> findNewCustomersSince(@Param("tenantId") Long tenantId, @Param("since") LocalDateTime since);
+    
+    /**
+     * Email ile müşteri bulma
+     */
+    Optional<Customer> findByEmailAndTenantId(String email, Long tenantId);
+    
+    /**
+     * Bildirimlere izin veren aktif müşteriler
+     */
+    List<Customer> findByTenantIdAndAllowNotificationsTrueAndActiveTrue(Long tenantId);
+    
+    /**
+     * Telefon numarası benzersizlik kontrolü (ID hariç)
+     */
+    boolean existsByPhoneNumberAndTenantIdAndIdNot(String phoneNumber, Long tenantId, Long id);
+    
+    /**
+     * Oluşturma tarihine göre sıralı aktif müşteriler (en yeni en başta)
+     */
+    List<Customer> findByTenantIdAndActiveTrueOrderByCreatedAtDesc(Long tenantId);
+    
+    /**
+     * Tenant'a ait aktif müşteri sayısı
+     */
+    long countByTenantIdAndActiveTrue(Long tenantId);
 }

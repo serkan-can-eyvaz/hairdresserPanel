@@ -68,6 +68,13 @@ public class TenantUser {
         EMPLOYEE        // Kuaför çalışanı
     }
     
+    // Alias enum for test compatibility
+    public enum Role {
+        SUPER_ADMIN,
+        TENANT_ADMIN,
+        EMPLOYEE
+    }
+    
     // Constructors
     public TenantUser() {}
     
@@ -138,6 +145,11 @@ public class TenantUser {
     }
     
     public Boolean getActive() {
+        return active;
+    }
+    
+    // Alias method for test compatibility
+    public Boolean isActive() {
         return active;
     }
     
