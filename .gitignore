@@ -1,0 +1,204 @@
+# =============================================================================
+# KUAFÖR PANEL - .gitignore
+# =============================================================================
+# Bu dosya projeye dahil edilmemesi gereken dosya/klasörleri belirtir
+# Her geliştirici kendi ortamında bu dosyaları oluşturmalıdır
+
+# =============================================================================
+# 🔐 GÜVENLİK - Hassas bilgiler (KESİNLİKLE REPO'YA EKLENMEMELİ!)
+# =============================================================================
+# Kullanıcı her sistemde kendi değerlerini ayarlamalı
+
+# Veritabanı bilgileri
+*.env
+.env
+.env.local
+.env.development
+.env.production
+
+# Uygulama konfigürasyon dosyaları (hassas bilgiler içeren)
+back-end/barber-automation/src/main/resources/application-prod.yml
+back-end/barber-automation/src/main/resources/application-local.yml
+
+# API anahtarları ve şifreler
+whatsapp-config.yml
+openai-config.yml
+jwt-secrets.txt
+
+# =============================================================================
+# 📱 BACKEND - Java/Spring Boot
+# =============================================================================
+
+# Maven
+back-end/barber-automation/target/
+back-end/barber-automation/.mvn/wrapper/maven-wrapper.jar
+back-end/barber-automation/.mvn/wrapper/maven-wrapper.properties
+
+# IDE Files
+back-end/barber-automation/.idea/
+back-end/barber-automation/.vscode/
+back-end/barber-automation/*.iml
+back-end/barber-automation/*.ipr
+back-end/barber-automation/*.iws
+
+# Spring Boot
+back-end/barber-automation/spring-boot-*.log
+back-end/barber-automation/application-*.yml
+!back-end/barber-automation/src/main/resources/application.yml
+!back-end/barber-automation/src/test/resources/application-test.yml
+
+# Logs
+back-end/barber-automation/logs/
+back-end/barber-automation/*.log
+back-end/barber-automation/log/
+
+# =============================================================================
+# 🎨 FRONTEND - React/Node.js
+# =============================================================================
+
+# Dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.js
+
+# Production build
+frontend/dist/
+frontend/build/
+
+# Environment variables
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Cache ve temporary files
+frontend/.npm
+frontend/.eslintcache
+frontend/.parcel-cache
+
+# IDE
+frontend/.vscode/
+frontend/.idea/
+
+# =============================================================================
+# 💾 VERİTABANI
+# =============================================================================
+# Kullanıcı kendi PostgreSQL veritabanını kurmalı
+
+# Veritabanı dump dosyaları
+*.sql
+*.dump
+*.backup
+
+# H2 Database (development)
+*.db
+*.h2.db
+
+# =============================================================================
+# 🖥️ SİSTEM VE IDE DOSYALARI
+# =============================================================================
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# IDE - Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IDE - Eclipse
+.metadata
+.project
+.classpath
+.settings/
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# =============================================================================
+# 📦 DEPENDENCY MANAGERS
+# =============================================================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Maven Local Repository (opsiyonel)
+# .m2/repository/
+
+# =============================================================================
+# 🚀 DEPLOYMENT VE CI/CD
+# =============================================================================
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Kubernetes
+k8s-secrets.yml
+
+# =============================================================================
+# 📄 DOKÜMANTASYON VE GELİŞTİRME
+# =============================================================================
+
+# Temporary files
+*.tmp
+*.temp
+TODO.md
+NOTES.md
+
+# Test coverage
+coverage/
+*.lcov
+
+# =============================================================================
+# 💡 KURULUM TALİMATLARI
+# =============================================================================
+# 
+# Her geliştirici aşağıdaki dosyaları kendi sisteminde oluşturmalı:
+#
+# 1. 🗄️ PostgreSQL Veritabanı:
+#    - Veritabanı adı: berberPanel
+#    - Kullanıcı: postgres (veya kendi tercihiniz)
+#    - Şifre: kendi şifreniz
+#
+# 2. 📄 Konfigürasyon dosyaları:
+#    - WhatsApp API token
+#    - OpenAI API key
+#    - JWT secret key
+#
+# 3. 🛠️ Gerekli yazılımlar:
+#    - Java 17+
+#    - Node.js 18+
+#    - PostgreSQL 12+
+#    - Maven 3.6+
+#
+# 4. 🔧 Environment variables:
+#    - WHATSAPP_ACCESS_TOKEN=your_token
+#    - OPENAI_API_KEY=your_key
+#    - JWT_SECRET=your_256_bit_secret
+#
+# =============================================================================

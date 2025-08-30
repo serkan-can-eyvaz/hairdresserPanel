@@ -65,7 +65,7 @@ public class AuthController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || !authentication.isAuthenticated()) {
-                return ResponseEntity.unauthorized().build();
+                return ResponseEntity.status(401).build();
             }
 
             String username = authentication.getName();
@@ -90,7 +90,7 @@ public class AuthController {
         if (authentication != null && authentication.isAuthenticated()) {
             return ResponseEntity.ok("Token geçerli");
         } else {
-            return ResponseEntity.unauthorized().body("Token geçersiz");
+            return ResponseEntity.status(401).body("Token geçersiz");
         }
     }
 }

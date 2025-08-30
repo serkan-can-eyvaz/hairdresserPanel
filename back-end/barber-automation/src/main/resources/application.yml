@@ -4,9 +4,9 @@ spring:
   
   # Database Configuration
   datasource:
-    url: jdbc:postgresql://localhost:5432/barber_booking
+    url: jdbc:postgresql://localhost:5432/berberPanel
     username: postgres
-    password: postgres
+    password: 2323
     driver-class-name: org.postgresql.Driver
   
   # JPA/Hibernate Configuration

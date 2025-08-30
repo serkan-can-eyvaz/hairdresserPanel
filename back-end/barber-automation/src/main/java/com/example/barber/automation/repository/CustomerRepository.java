@@ -101,9 +101,4 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
      * Oluşturma tarihine göre sıralı aktif müşteriler (en yeni en başta)
      */
     List<Customer> findByTenantIdAndActiveTrueOrderByCreatedAtDesc(Long tenantId);
-    
-    /**
-     * Tenant'a ait aktif müşteri sayısı
-     */
-    long countByTenantIdAndActiveTrue(Long tenantId);
 }
