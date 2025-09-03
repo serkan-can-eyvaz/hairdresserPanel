@@ -1,6 +1,7 @@
 package com.example.barber.automation.controller;
 
 import com.example.barber.automation.dto.TenantDto;
+import com.example.barber.automation.entity.Tenant;
 import com.example.barber.automation.service.TenantService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +47,7 @@ class SimpleTenantControllerTest {
 
     // Test data
     private TenantDto tenantDto;
+    private Tenant tenant;
 
     @BeforeEach
     void setUp() {
@@ -54,6 +56,13 @@ class SimpleTenantControllerTest {
         tenantDto.setName("Test Kuaför");
         tenantDto.setPhoneNumber("+905321234567");
         tenantDto.setActive(true);
+        
+        // Tenant entity oluştur
+        tenant = new Tenant();
+        tenant.setId(1L);
+        tenant.setName("Test Kuaför");
+        tenant.setPhoneNumber("+905321234567");
+        tenant.setActive(true);
     }
 
     @Test
@@ -113,7 +122,7 @@ class SimpleTenantControllerTest {
     @DisplayName("GET /tenants/by-phone/{phoneNumber} - Telefon ile getirme")
     void getTenantByPhoneNumber_WhenExists_ShouldReturnTenant() throws Exception {
         // Given: Service'den tenant döner
-        when(tenantService.findByPhoneNumber("+905321234567")).thenReturn(Optional.of(tenantDto));
+        when(tenantService.findByPhoneNumber("+905321234567")).thenReturn(tenant);
 
         // When & Then: GET request
         mockMvc.perform(get("/tenants/by-phone/{phoneNumber}", "+905321234567")

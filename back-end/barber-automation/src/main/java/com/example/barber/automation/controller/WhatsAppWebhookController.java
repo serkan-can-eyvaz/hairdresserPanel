@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
+
 /**
  * WhatsApp Webhook Controller
  */
@@ -26,7 +28,7 @@ public class WhatsAppWebhookController {
     private final WhatsAppService whatsAppService;
     private final WhatsAppBotService whatsAppBotService;
     
-    @Value("${whatsapp.webhook-verify-token}")
+    @Value("${whatsapp.api.webhook-verify-token}")
     private String webhookVerifyToken;
     
     @Autowired
@@ -34,6 +36,37 @@ public class WhatsAppWebhookController {
                                    WhatsAppBotService whatsAppBotService) {
         this.whatsAppService = whatsAppService;
         this.whatsAppBotService = whatsAppBotService;
+    }
+    
+    /**
+     * Mock test endpoint - WhatsApp mesajı simülasyonu
+     */
+    @PostMapping("/mock")
+    @Operation(summary = "Mock WhatsApp mesajı", description = "Test için mock WhatsApp mesajı gönder")
+    public ResponseEntity<String> mockWhatsAppMessage(
+            @Parameter(description = "Telefon numarası") @RequestParam("phone") String phone,
+            @Parameter(description = "Mesaj") @RequestParam("message") String message,
+            @Parameter(description = "Tenant ID") @RequestParam(value = "tenantId", defaultValue = "1") Long tenantId) {
+        
+        logger.info("=== MOCK WHATSAPP TEST ===");
+        logger.info("Phone: {}", phone);
+        logger.info("Message: {}", message);
+        logger.info("Tenant ID: {}", tenantId);
+        logger.info("========================");
+        
+        try {
+            // Mock webhook request oluştur (Twilio formatında)
+            String mockRawBody = String.format(
+                "{\"From\":\"%s\",\"Body\":\"%s\",\"To\":\"whatsapp:+14155238886\"}", 
+                phone, message
+            );
+            
+            // Ana webhook endpoint'ini kullan
+            return receiveMessage(mockRawBody);
+        } catch (Exception e) {
+            logger.error("Mock mesaj işleme hatası: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body("Hata: " + e.getMessage());
+        }
     }
     
     /**
@@ -62,15 +95,23 @@ public class WhatsAppWebhookController {
      */
     @PostMapping
     @Operation(summary = "WhatsApp mesajları", description = "WhatsApp'tan gelen mesajları işler")
-    public ResponseEntity<String> receiveMessage(@RequestBody WhatsAppWebhookRequest webhookRequest) {
+    public ResponseEntity<String> receiveMessage(@RequestBody String rawBody) {
         try {
-            logger.info("WhatsApp webhook mesajı alındı: {}", webhookRequest.getObject());
+            logger.info("WhatsApp webhook raw body alındı: {}", rawBody);
             
-            // Gelen mesajları işle
-            if (webhookRequest.getEntry() != null) {
-                for (WhatsAppWebhookRequest.Entry entry : webhookRequest.getEntry()) {
-                    processEntry(entry);
+            // Raw body'yi parse et
+            if (rawBody.contains("whatsapp_business_account")) {
+                // WhatsApp Business API formatı
+                WhatsAppWebhookRequest webhookRequest = parseWhatsAppWebhook(rawBody);
+                if (webhookRequest.getEntry() != null) {
+                    for (WhatsAppWebhookRequest.Entry entry : webhookRequest.getEntry()) {
+                        processEntry(entry);
+                    }
                 }
+            } else {
+                // Twilio formatı - direkt bot servisine gönder
+                logger.info("Twilio formatı tespit edildi, bot servisine yönlendiriliyor");
+                whatsAppBotService.processIncomingMessage(rawBody);
             }
             
             return ResponseEntity.ok("EVENT_RECEIVED");
@@ -100,6 +141,17 @@ public class WhatsAppWebhookController {
     }
     
     // Private helper methods
+    
+    private WhatsAppWebhookRequest parseWhatsAppWebhook(String rawBody) {
+        try {
+            // JSON parse et
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.readValue(rawBody, WhatsAppWebhookRequest.class);
+        } catch (Exception e) {
+            logger.error("WhatsApp webhook parse edilemedi", e);
+            return new WhatsAppWebhookRequest();
+        }
+    }
     
     private void processEntry(WhatsAppWebhookRequest.Entry entry) {
         if (entry.getChanges() == null) return;
@@ -131,8 +183,24 @@ public class WhatsAppWebhookController {
             
             // Sadece text mesajlarını işle
             if ("text".equals(messageType) && messageText != null && !messageText.trim().isEmpty()) {
-                // Bot servisine mesajı ilet
-                whatsAppBotService.processIncomingMessage(fromNumber, messageText, businessPhoneNumber);
+                // Bot servisine mesajı ilet - WhatsAppWebhookRequest objesi oluştur
+                WhatsAppWebhookRequest webhookRequest = new WhatsAppWebhookRequest();
+                webhookRequest.setObject("whatsapp_business_account");
+                
+                WhatsAppWebhookRequest.Entry entry = new WhatsAppWebhookRequest.Entry();
+                entry.setId("1");
+                
+                WhatsAppWebhookRequest.Change change = new WhatsAppWebhookRequest.Change();
+                change.setField("messages");
+                change.setValue(new WhatsAppWebhookRequest.Value());
+                change.getValue().setMessages(Arrays.asList(message));
+                change.getValue().setMetadata(new WhatsAppWebhookRequest.Metadata());
+                change.getValue().getMetadata().setDisplayPhoneNumber(businessPhoneNumber);
+                
+                entry.setChanges(Arrays.asList(change));
+                webhookRequest.setEntry(Arrays.asList(entry));
+                
+                whatsAppBotService.processIncomingMessage(webhookRequest);
             }
             
         } catch (Exception e) {

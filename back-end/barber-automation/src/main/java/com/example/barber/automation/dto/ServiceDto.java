@@ -1,51 +1,34 @@
 package com.example.barber.automation.dto;
 
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Service (Hizmet) DTO
+ * Kuaför hizmetleri için DTO
  */
 public class ServiceDto {
     
     private Long id;
-    
-    @NotBlank(message = "Hizmet adı boş olamaz")
     private String name;
-    
     private String description;
-    
-    @NotNull(message = "Süre boş olamaz")
-    @Min(value = 1, message = "Süre en az 1 dakika olmalı")
     private Integer durationMinutes;
-    
     private BigDecimal price;
     private String currency;
     private Boolean active;
     private Integer sortOrder;
+    private Long tenantId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    
-    private Long tenantId;
     
     // Constructors
     public ServiceDto() {}
     
-    public ServiceDto(Long id, String name, Integer durationMinutes) {
-        this.id = id;
+    public ServiceDto(String name, Integer durationMinutes, BigDecimal price) {
         this.name = name;
-        this.durationMinutes = durationMinutes;
-    }
-    
-    public ServiceDto(String name, String description, Integer durationMinutes, BigDecimal price) {
-        this.name = name;
-        this.description = description;
         this.durationMinutes = durationMinutes;
         this.price = price;
+        this.currency = "TRY";
+        this.active = true;
     }
     
     // Getters and Setters
@@ -113,6 +96,14 @@ public class ServiceDto {
         this.sortOrder = sortOrder;
     }
     
+    public Long getTenantId() {
+        return tenantId;
+    }
+    
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
+    }
+    
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -129,16 +120,19 @@ public class ServiceDto {
         this.updatedAt = updatedAt;
     }
     
-    public Long getTenantId() {
-        return tenantId;
-    }
-    
-    public void setTenantId(Long tenantId) {
-        this.tenantId = tenantId;
-    }
-    
     public String getFormattedPrice() {
         if (price == null) return "Fiyat belirtilmemiş";
         return price + " " + currency;
+    }
+    
+    @Override
+    public String toString() {
+        return "ServiceDto{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", durationMinutes=" + durationMinutes +
+                ", price=" + price +
+                ", active=" + active +
+                '}';
     }
 }

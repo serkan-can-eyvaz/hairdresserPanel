@@ -104,4 +104,9 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
      */
     @Query("SELECT AVG(s.price) FROM Service s WHERE s.tenant.id = :tenantId AND s.active = true")
     Double findAveragePriceByTenantIdAndActiveTrue(@Param("tenantId") Long tenantId);
+    
+    /**
+     * Tenant ve isme göre hizmet varlığını kontrol etme
+     */
+    boolean existsByNameAndTenant(String name, com.example.barber.automation.entity.Tenant tenant);
 }

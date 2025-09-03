@@ -72,13 +72,13 @@ class TenantServiceTest {
                 .thenReturn(Optional.of(existingTenant));
 
         // When: Service çağrılır
-        Optional<TenantDto> result = tenantService.findByPhoneNumber("+905321234567");
+        Tenant result = tenantService.findByPhoneNumber("+905321234567");
 
-        // Then: DTO formatında sonuç döner
-        assertThat(result).isPresent();
-        assertThat(result.get().getName()).isEqualTo(existingTenant.getName());
-        assertThat(result.get().getPhoneNumber()).isEqualTo(existingTenant.getPhoneNumber());
-        assertThat(result.get().getActive()).isTrue();
+        // Then: Entity formatında sonuç döner
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo(existingTenant.getName());
+        assertThat(result.getPhoneNumber()).isEqualTo(existingTenant.getPhoneNumber());
+        assertThat(result.getActive()).isTrue();
 
         // Repository'nin doğru parametrelerle çağrıldığını doğrula
         verify(tenantRepository).findByPhoneNumber("+905321234567");
@@ -92,10 +92,10 @@ class TenantServiceTest {
                 .thenReturn(Optional.empty());
 
         // When: Service çağrılır
-        Optional<TenantDto> result = tenantService.findByPhoneNumber("+905329999999");
+        Tenant result = tenantService.findByPhoneNumber("+905329999999");
 
-        // Then: Empty sonuç döner
-        assertThat(result).isEmpty();
+        // Then: Null sonuç döner
+        assertThat(result).isNull();
 
         verify(tenantRepository).findByPhoneNumber("+905329999999");
     }

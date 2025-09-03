@@ -101,6 +101,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     isSuperAdmin,
     isTenantAdmin,
+    token: localStorage.getItem('token'), // Token'ı da ekle
   };
 
   return (

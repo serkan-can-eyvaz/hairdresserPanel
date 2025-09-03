@@ -1,6 +1,7 @@
 package com.example.barber.automation.service;
 
 import com.example.barber.automation.dto.CreateTenantRequest;
+import com.example.barber.automation.dto.CreateTenantSimpleRequest;
 import com.example.barber.automation.dto.DashboardStats;
 import com.example.barber.automation.entity.Tenant;
 import com.example.barber.automation.entity.TenantUser;
@@ -104,41 +105,46 @@ public class AdminService {
             throw new RuntimeException("Bu telefon numarası zaten kullanılıyor");
         }
 
-        // Admin kullanıcı adı kontrolü
-        if (tenantUserRepository.existsByUsername(request.getAdminUsername())) {
-            throw new RuntimeException("Bu kullanıcı adı zaten kullanılıyor");
-        }
-
-        // Admin email kontrolü
-        if (tenantUserRepository.existsByEmail(request.getAdminEmail())) {
-            throw new RuntimeException("Bu email adresi zaten kullanılıyor");
-        }
-
         // Tenant oluştur
         Tenant tenant = new Tenant();
-        tenant.setName(request.getTenantName());
+        tenant.setName(request.getName());
         tenant.setPhoneNumber(request.getPhoneNumber());
         tenant.setAddress(request.getAddress());
         tenant.setEmail(request.getEmail());
         tenant.setTimezone(request.getTimezone());
         tenant.setActive(true);
 
+        // Konum alanları
+        tenant.setCity(request.getCity());
+        tenant.setDistrict(request.getDistrict());
+        tenant.setNeighborhood(request.getNeighborhood());
+        tenant.setAddressDetail(request.getAddressDetail());
+
         Tenant savedTenant = tenantRepository.save(tenant);
 
-        // Tenant admin kullanıcı oluştur
-        TenantUser tenantAdmin = new TenantUser();
-        tenantAdmin.setUsername(request.getAdminUsername());
-        tenantAdmin.setEmail(request.getAdminEmail());
-        tenantAdmin.setPassword(passwordEncoder.encode(request.getAdminPassword()));
-        tenantAdmin.setFirstName(request.getAdminFirstName());
-        tenantAdmin.setLastName(request.getAdminLastName());
-        tenantAdmin.setRole(TenantUser.UserRole.TENANT_ADMIN);
-        tenantAdmin.setActive(true);
-        tenantAdmin.setTenant(savedTenant);
-
-        tenantUserRepository.save(tenantAdmin);
-
         return savedTenant;
+    }
+
+    /**
+     * Yeni tenant oluştur (sadece kuaför, admin kullanıcı olmadan)
+     */
+    @Transactional
+    public Tenant createTenantSimple(CreateTenantSimpleRequest request) {
+        // Telefon numarası kontrolü
+        if (tenantRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new RuntimeException("Bu telefon numarası zaten kullanılıyor");
+        }
+
+        // Tenant oluştur
+        Tenant tenant = new Tenant();
+        tenant.setName(request.getName());
+        tenant.setPhoneNumber(request.getPhoneNumber());
+        tenant.setAddress(request.getAddress());
+        tenant.setEmail(request.getEmail());
+        tenant.setTimezone(request.getTimezone());
+        tenant.setActive(true);
+
+        return tenantRepository.save(tenant);
     }
 
     /**

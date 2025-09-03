@@ -9,6 +9,14 @@ import Sidebar from './components/Sidebar';
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Tenants from './pages/Tenants';
+import CreateTenant from './pages/CreateTenant';
+import Services from './pages/Services';
+import Reports from './pages/Reports';
+import Subscriptions from './pages/Subscriptions';
+import Settings from './pages/Settings';
+import Appointments from './pages/Appointments';
+import Customers from './pages/Customers';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -72,20 +80,13 @@ const AppContent = () => {
           }
         />
         
-        {/* Tenant routes - Placeholder for now */}
+        {/* Tenant routes */}
         <Route
           path="/tenants"
           element={
             <ProtectedRoute>
               <AppLayout>
-                <div className="text-center py-12">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    Kuaförler
-                  </h2>
-                  <p className="text-gray-600">
-                    Bu sayfa yakında tamamlanacak...
-                  </p>
-                </div>
+                <Tenants />
               </AppLayout>
             </ProtectedRoute>
           }
@@ -96,14 +97,18 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <AppLayout>
-                <div className="text-center py-12">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    Yeni Kuaför Ekle
-                  </h2>
-                  <p className="text-gray-600">
-                    Bu sayfa yakında tamamlanacak...
-                  </p>
-                </div>
+                <CreateTenant />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/services"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Services />
               </AppLayout>
             </ProtectedRoute>
           }
@@ -114,14 +119,7 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <AppLayout>
-                <div className="text-center py-12">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    Raporlar
-                  </h2>
-                  <p className="text-gray-600">
-                    Bu sayfa yakında tamamlanacak...
-                  </p>
-                </div>
+                <Reports />
               </AppLayout>
             </ProtectedRoute>
           }
@@ -132,14 +130,7 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <AppLayout>
-                <div className="text-center py-12">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    Abonelikler
-                  </h2>
-                  <p className="text-gray-600">
-                    Bu sayfa yakında tamamlanacak...
-                  </p>
-                </div>
+                <Subscriptions />
               </AppLayout>
             </ProtectedRoute>
           }
@@ -150,14 +141,29 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <AppLayout>
-                <div className="text-center py-12">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    Ayarlar
-                  </h2>
-                  <p className="text-gray-600">
-                    Bu sayfa yakında tamamlanacak...
-                  </p>
-                </div>
+                <Settings />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/appointments"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Appointments />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/customers"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <Customers />
               </AppLayout>
             </ProtectedRoute>
           }

@@ -127,4 +127,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
      * Tenant'a ait toplam randevu sayısı
      */
     long countByTenantId(Long tenantId);
+    
+    /**
+     * Tenant'a ait tüm randevuları tarih sıralı getirme
+     */
+    List<Appointment> findByTenantIdOrderByStartTimeDesc(Long tenantId);
+    
+    /**
+     * Tüm randevuları tarih sıralı getirme
+     */
+    List<Appointment> findAllByOrderByStartTimeDesc();
+    
+    /**
+     * Belirli tenant ve tarih aralığında belirli statüde olmayan randevuları getirme
+     */
+    List<Appointment> findByTenantIdAndStartTimeBetweenAndStatusNot(Long tenantId, LocalDateTime startTime, LocalDateTime endTime, String status);
 }

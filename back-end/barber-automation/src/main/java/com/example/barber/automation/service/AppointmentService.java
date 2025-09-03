@@ -72,6 +72,26 @@ public class AppointmentService {
     }
     
     /**
+     * Tenant'a ait tüm randevuları listeleme (Controller için)
+     */
+    public List<AppointmentDto> findAllByTenantId(Long tenantId) {
+        return appointmentRepository.findByTenantIdOrderByStartTimeDesc(tenantId)
+                .stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Tüm randevuları listeleme
+     */
+    public List<AppointmentDto> findAll() {
+        return appointmentRepository.findAllByOrderByStartTimeDesc()
+                .stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+    
+    /**
      * Belirli tarih aralığındaki randevuları getirme
      */
     public List<AppointmentDto> findByDateRange(Long tenantId, LocalDateTime startDate, LocalDateTime endDate) {
@@ -163,6 +183,23 @@ public class AppointmentService {
         
         appointment.setNotes(request.getNotes());
         appointment.setStatus(Appointment.AppointmentStatus.PENDING);
+        // Hizmet fiyatı ve para birimini randevuya işle
+        try {
+            if (service.getPrice() != null) {
+                appointment.setTotalPrice(service.getPrice());
+            }
+            if (service.getCurrency() != null && !service.getCurrency().isBlank()) {
+                appointment.setCurrency(service.getCurrency());
+            } else {
+                // Varsayılan para birimi
+                appointment.setCurrency("TRY");
+            }
+        } catch (Exception ignored) {
+            // Herhangi bir serileştirme/nullable probleminde randevuyu bloke etme
+            if (appointment.getCurrency() == null) {
+                appointment.setCurrency("TRY");
+            }
+        }
         
         Appointment savedAppointment = appointmentRepository.save(appointment);
         return convertToDto(savedAppointment);

@@ -26,7 +26,7 @@ public class Customer {
     private String name;
     
     @NotBlank(message = "Telefon numarası boş olamaz")
-    @Pattern(regexp = "^\\+[1-9]\\d{1,14}$", message = "Geçerli bir telefon numarası giriniz (+905321234567)")
+    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Geçerli bir telefon numarası giriniz (905321234567 veya +905321234567)")
     @Column(nullable = false, length = 20)
     private String phoneNumber;
     

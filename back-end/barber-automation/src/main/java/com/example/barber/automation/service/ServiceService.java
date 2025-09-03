@@ -98,7 +98,7 @@ public class ServiceService {
         // Sıralama için en son sıra numarasını al
         if (service.getSortOrder() == null || service.getSortOrder() == 0) {
             long count = serviceRepository.countByTenantIdAndActiveTrue(tenantId);
-            service.setSortOrder((int) count + 1);
+            service.setSortOrder((int) (count + 1));
         }
         
         Service savedService = serviceRepository.save(service);
@@ -108,27 +108,55 @@ public class ServiceService {
     /**
      * Hizmet güncelleme
      */
-    public ServiceDto updateService(Long id, ServiceDto serviceDto, Long tenantId) {
-        Service existingService = serviceRepository.findByIdAndTenantId(id, tenantId)
+    public ServiceDto updateService(Long id, ServiceDto serviceDto) {
+        Service existingService = serviceRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Hizmet bulunamadı: " + id));
         
         // Hizmet adı tekrar kontrolü (kendisi hariç)
-        if (serviceRepository.existsByTenantIdAndNameIgnoreCaseAndIdNot(tenantId, serviceDto.getName(), id)) {
-            throw new IllegalArgumentException("Bu hizmet adı başka bir hizmet tarafından kullanılıyor");
+        if (serviceRepository.existsByTenantIdAndNameIgnoreCaseAndIdNot(
+                existingService.getTenant().getId(), serviceDto.getName(), id)) {
+            throw new IllegalArgumentException("Bu hizmet adı zaten kayıtlı");
         }
         
-        // Güncelleme
         existingService.setName(serviceDto.getName());
         existingService.setDescription(serviceDto.getDescription());
         existingService.setDurationMinutes(serviceDto.getDurationMinutes());
         existingService.setPrice(serviceDto.getPrice());
         existingService.setCurrency(serviceDto.getCurrency());
-        if (serviceDto.getSortOrder() != null) {
-            existingService.setSortOrder(serviceDto.getSortOrder());
-        }
+        existingService.setSortOrder(serviceDto.getSortOrder());
         
         Service updatedService = serviceRepository.save(existingService);
         return convertToDto(updatedService);
+    }
+    
+    /**
+     * Hizmet silme (soft delete)
+     */
+    public void deleteService(Long id) {
+        Service service = serviceRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Hizmet bulunamadı: " + id));
+        
+        service.setActive(false);
+        serviceRepository.save(service);
+    }
+    
+    /**
+     * Hizmet durumunu değiştir (aktif/pasif)
+     */
+    public ServiceDto toggleServiceStatus(Long id) {
+        Service service = serviceRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Hizmet bulunamadı: " + id));
+        
+        service.setActive(!service.getActive());
+        Service savedService = serviceRepository.save(service);
+        return convertToDto(savedService);
+    }
+    
+    /**
+     * Hizmet sahibi kontrolü
+     */
+    public boolean isServiceOwner(Long serviceId, Long tenantId) {
+        return serviceRepository.findByIdAndTenantId(serviceId, tenantId).isPresent();
     }
     
     /**

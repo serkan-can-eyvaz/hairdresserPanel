@@ -30,6 +30,18 @@ public class WhatsAppService {
     @Value("${whatsapp.api.token}")
     private String accessToken;
     
+    @Value("${whatsapp.api.phone-number-id}")
+    private String phoneNumberId;
+    
+    @Value("${twilio.accountSid}")
+    private String twilioAccountSid;
+    
+    @Value("${twilio.authToken}")
+    private String twilioAuthToken;
+    
+    @Value("${whatsapp.mock.enabled:false}")
+    private boolean mockEnabled;
+    
     public WhatsAppService(WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
         this.webClient = webClientBuilder.build();
         this.objectMapper = objectMapper;
@@ -39,33 +51,69 @@ public class WhatsAppService {
      * WhatsApp mesajı gönderme
      */
     public void sendMessage(String toPhoneNumber, String message, Long tenantId) {
+        // Mock modu kontrolü
+        if (mockEnabled) {
+            logger.info("=== MOCK WHATSAPP MESSAGE ===");
+            logger.info("To: {}", toPhoneNumber);
+            logger.info("Message: {}", message);
+            logger.info("Tenant ID: {}", tenantId);
+            logger.info("=============================");
+            return;
+        }
+        
         try {
-            // Telefon numarası formatı kontrolü
-            String formattedNumber = formatPhoneNumber(toPhoneNumber);
+            // Twilio WhatsApp Sandbox için Twilio API'sini kullan
+            logger.info("=== TWILIO WHATSAPP API DEBUG ===");
+            logger.info("Using Twilio WhatsApp Sandbox API");
+            logger.info("To: {}", toPhoneNumber);
+            logger.info("Message: {}", message);
+            logger.info("================================");
             
-            // Mesaj payload'ı oluştur
-            Map<String, Object> payload = createMessagePayload(formattedNumber, message);
+            // Twilio API endpoint'i
+            String twilioUrl = "https://api.twilio.com/2010-04-01/Accounts/" + 
+                              twilioAccountSid + "/Messages.json";
             
-            // API isteği gönder
-            String response = webClient
-                    .post()
-                    .uri(whatsappApiUrl + "/messages")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .bodyValue(payload)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .doOnError(error -> logger.error("WhatsApp API hatası: {}", error.getMessage()))
-                    .onErrorReturn("{\"error\": \"API call failed\"}")
-                    .block();
+            // Twilio Basic Auth için credentials
+            String credentials = twilioAccountSid + ":" + twilioAuthToken;
+            String encodedCredentials = java.util.Base64.getEncoder().encodeToString(credentials.getBytes());
             
-            logger.info("WhatsApp mesajı gönderildi - To: {}, Tenant: {}, Response: {}", 
-                    formattedNumber, tenantId, response);
+            // Telefon numarasını temizle ve formatla
+            String cleanPhoneNumber = toPhoneNumber.replace("whatsapp%3A%2B", "").replace("whatsapp:", "");
+            if (!cleanPhoneNumber.startsWith("+")) {
+                cleanPhoneNumber = "+" + cleanPhoneNumber;
+            }
+            
+            // Twilio form data - MultiValueMap kullan
+            org.springframework.util.MultiValueMap<String, String> formData = 
+                new org.springframework.util.LinkedMultiValueMap<>();
+            formData.add("From", "whatsapp:+14155238886");
+            formData.add("To", "whatsapp:" + cleanPhoneNumber);
+            formData.add("Body", message);
+            
+            logger.info("Twilio Form Data: From=whatsapp:+14155238886, To=whatsapp:{}, Body={}", cleanPhoneNumber, message);
+            
+            // Twilio API'ye POST isteği gönder
+            try {
+                String response = webClient.post()
+                        .uri(twilioUrl)
+                        .header(HttpHeaders.AUTHORIZATION, "Basic " + encodedCredentials)
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .body(org.springframework.web.reactive.function.BodyInserters.fromFormData(formData))
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .block();
+                
+                logger.info("Twilio WhatsApp mesajı gönderildi - To: {}, Tenant: {}, Response: {}", 
+                           cleanPhoneNumber, tenantId, response);
+                
+            } catch (org.springframework.web.reactive.function.client.WebClientResponseException e) {
+                logger.error("Twilio API Error - Status: {}", e.getStatusCode());
+                logger.error("Twilio API Error Body: {}", e.getResponseBodyAsString());
+                throw e;
+            }
             
         } catch (Exception e) {
-            logger.error("WhatsApp mesajı gönderilemedi - To: {}, Tenant: {}", 
-                    toPhoneNumber, tenantId, e);
-            throw new RuntimeException("WhatsApp mesajı gönderilemedi", e);
+            logger.error("Twilio WhatsApp API hatası: {}", e.getMessage(), e);
         }
     }
     
@@ -81,7 +129,7 @@ public class WhatsAppService {
             
             String response = webClient
                     .post()
-                    .uri(whatsappApiUrl + "/messages")
+                    .uri(whatsappApiUrl + "/" + phoneNumberId + "/messages")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     .bodyValue(payload)
@@ -125,14 +173,17 @@ public class WhatsAppService {
     // Private helper methods
     
     private String formatPhoneNumber(String phoneNumber) {
-        // Telefon numarası formatlaması (uluslararası format)
+        // Telefon numarası formatlaması (WhatsApp API için + ile başlamalı)
         if (phoneNumber.startsWith("+")) {
-            return phoneNumber.substring(1); // + işaretini kaldır
+            return phoneNumber; // + işareti varsa olduğu gibi bırak
         }
         if (phoneNumber.startsWith("0")) {
-            return "90" + phoneNumber.substring(1); // Türkiye için 90 ekle
+            return "+90" + phoneNumber.substring(1); // Türkiye için +90 ekle
         }
-        return phoneNumber;
+        if (phoneNumber.startsWith("90")) {
+            return "+" + phoneNumber; // 90 ile başlıyorsa + ekle
+        }
+        return "+" + phoneNumber; // Hiçbiri değilse + ekle
     }
     
     private Map<String, Object> createMessagePayload(String toPhoneNumber, String message) {
@@ -207,7 +258,7 @@ public class WhatsAppService {
             
             String response = webClient
                     .post()
-                    .uri(whatsappApiUrl + "/messages")
+                    .uri(whatsappApiUrl + "/" + phoneNumberId + "/messages")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     .bodyValue(payload)
