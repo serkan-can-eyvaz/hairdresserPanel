@@ -12,9 +12,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
 
@@ -23,7 +25,7 @@ import java.util.Arrays;
  */
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity(prePostEnabled = true, jsr250Enabled = true)
 public class SecurityConfig {
 
     @Autowired
@@ -45,10 +47,27 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 // Public endpoints (login, health check, webhook vb.)
                 .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/health").permitAll()
+                // WhatsApp webhook (both path variants)
                 .requestMatchers("/whatsapp/webhook/**").permitAll()
+                .requestMatchers("/webhook/whatsapp/**").permitAll()
+                // Twilio webhook
+                .requestMatchers("/webhook/twilio/**").permitAll()
+                // Locations (city/district/neighborhood lists)
+                .requestMatchers("/locations/**").permitAll()
+                .requestMatchers("/api/locations/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
                 .requestMatchers("/error").permitAll()
+                // Tenants endpoint (test için geçici olarak permitAll)
+                .requestMatchers("/tenants/**").permitAll()
+                .requestMatchers("/api/tenants/**").permitAll()
+                // Customers endpoint (test için geçici olarak permitAll)
+                .requestMatchers("/customers/**").permitAll()
+                .requestMatchers("/api/customers/**").permitAll()
+                // Appointments endpoint (test için geçici olarak permitAll)
+                .requestMatchers("/appointments/**").permitAll()
+                .requestMatchers("/api/appointments/**").permitAll()
                 
                 // Admin endpoints - Sadece SUPER_ADMIN erişebilir
                 .requestMatchers("/admin/**").hasRole("SUPER_ADMIN")
@@ -94,5 +113,23 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         
         return source;
+    }
+
+    // Locations endpointlerini tamamen güvenlik zincirinin dışında bırak (geçici kolaylık)
+    @Bean
+    public org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer webSecurityCustomizer() {
+        return web -> web.ignoring().requestMatchers(
+                new AntPathRequestMatcher("/locations/**"),
+                new AntPathRequestMatcher("/api/locations/**"),
+                new AntPathRequestMatcher("/swagger-ui/**"),
+                new AntPathRequestMatcher("/api/swagger-ui/**"),
+                new AntPathRequestMatcher("/v3/api-docs/**"),
+                new AntPathRequestMatcher("/api/v3/api-docs/**")
+        );
+    }
+    
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 }

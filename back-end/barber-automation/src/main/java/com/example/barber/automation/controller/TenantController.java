@@ -1,6 +1,8 @@
 package com.example.barber.automation.controller;
 
 import com.example.barber.automation.dto.TenantDto;
+import com.example.barber.automation.dto.CreateTenantRequest;
+import com.example.barber.automation.entity.Tenant;
 import com.example.barber.automation.service.TenantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -59,9 +61,24 @@ public class TenantController {
     public ResponseEntity<TenantDto> getTenantByPhoneNumber(
             @Parameter(description = "Telefon numarası (+905321234567 formatında)") 
             @PathVariable String phoneNumber) {
-        return tenantService.findByPhoneNumber(phoneNumber)
-                .map(tenant -> ResponseEntity.ok(tenant))
-                .orElse(ResponseEntity.notFound().build());
+        Tenant tenant = tenantService.findByPhoneNumber(phoneNumber);
+        if (tenant != null) {
+            // Tenant'ı DTO'ya çevir
+            TenantDto tenantDto = new TenantDto();
+            tenantDto.setId(tenant.getId());
+            tenantDto.setName(tenant.getName());
+            tenantDto.setPhoneNumber(tenant.getPhoneNumber());
+            tenantDto.setAddress(tenant.getAddress());
+            tenantDto.setEmail(tenant.getEmail());
+            tenantDto.setTimezone(tenant.getTimezone());
+            tenantDto.setLogoUrl(tenant.getLogoUrl());
+            tenantDto.setActive(tenant.getActive());
+            tenantDto.setCreatedAt(tenant.getCreatedAt());
+            tenantDto.setUpdatedAt(tenant.getUpdatedAt());
+            return ResponseEntity.ok(tenantDto);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
     
     /**
@@ -76,14 +93,31 @@ public class TenantController {
     }
     
     /**
+     * Şehir ve ilçeye göre kuaför arama
+     */
+    @GetMapping("/by-location")
+    @Operation(summary = "Konuma göre kuaför arama", description = "Şehir ve ilçeye göre kuaförleri listeler")
+    public ResponseEntity<List<TenantDto>> getTenantsByLocation(
+            @Parameter(description = "Şehir adı") @RequestParam String city,
+            @Parameter(description = "İlçe adı (opsiyonel)") @RequestParam(required = false) String district) {
+        List<TenantDto> tenants;
+        if (district != null && !district.trim().isEmpty()) {
+            tenants = tenantService.findByCityAndDistrictDto(city, district);
+        } else {
+            tenants = tenantService.findByCityDto(city);
+        }
+        return ResponseEntity.ok(tenants);
+    }
+    
+    /**
      * Yeni kuaför oluştur
      */
     @PostMapping
     @Operation(summary = "Yeni kuaför oluştur", description = "Sisteme yeni kuaför ekler")
     public ResponseEntity<TenantDto> createTenant(
-            @Parameter(description = "Kuaför bilgileri") @Valid @RequestBody TenantDto tenantDto) {
+            @Parameter(description = "Kuaför bilgileri") @Valid @RequestBody CreateTenantRequest request) {
         try {
-            TenantDto createdTenant = tenantService.createTenant(tenantDto);
+            TenantDto createdTenant = tenantService.createTenantWithServices(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdTenant);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();

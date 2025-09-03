@@ -1,0 +1,12 @@
+﻿{
+    "phoneNumber":  "+15551917620",
+    "adminUsername":  "testadmin",
+    "email":  "test@test.com",
+    "adminEmail":  "testadmin@test.com",
+    "adminFirstName":  "Test",
+    "timezone":  "Europe/Istanbul",
+    "address":  "Test Adres",
+    "adminPassword":  "test123",
+    "adminLastName":  "Admin",
+    "tenantName":  "Test Kuaför Salonu"
+}

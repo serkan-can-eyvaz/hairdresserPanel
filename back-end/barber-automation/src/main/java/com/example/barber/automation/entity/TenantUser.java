@@ -42,6 +42,9 @@ public class TenantUser {
     @Column(nullable = false, length = 50)
     private String lastName;
     
+    @Column(length = 20)
+    private String phone;
+    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role = UserRole.EMPLOYEE;
@@ -58,8 +61,9 @@ public class TenantUser {
     private LocalDateTime updatedAt;
     
     // Many-to-One relationship with Tenant
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", nullable = false)
+    // SUPER_ADMIN kullanıcıları herhangi bir tenant'a bağlı değildir.
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "tenant_id", nullable = true)
     private Tenant tenant;
     
     public enum UserRole {
@@ -134,6 +138,14 @@ public class TenantUser {
     
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+    
+    public String getPhone() {
+        return phone;
+    }
+    
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
     
     public UserRole getRole() {

@@ -7,7 +7,10 @@ import {
   BarChart3, 
   CreditCard,
   Store,
-  Settings
+  Settings,
+  Scissors,
+  Calendar,
+  UserCheck
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -29,6 +32,24 @@ const Sidebar = () => {
       href: '/tenants/create',
       icon: UserPlus,
       description: 'Yeni kuaför ekle'
+    },
+    {
+      name: 'Hizmetler',
+      href: '/services',
+      icon: Scissors,
+      description: 'Hizmet yönetimi'
+    },
+    {
+      name: 'Randevular',
+      href: '/appointments',
+      icon: Calendar,
+      description: 'Randevu yönetimi'
+    },
+    {
+      name: 'Müşteriler',
+      href: '/customers',
+      icon: UserCheck,
+      description: 'Müşteri yönetimi'
     },
     {
       name: 'Raporlar',

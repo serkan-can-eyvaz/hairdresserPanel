@@ -252,7 +252,7 @@ class ServiceServiceTest {
                 .thenReturn(updatedService);
 
         // When: Service çağrılır
-        ServiceDto result = serviceService.updateService(1L, serviceDto, 1L);
+        ServiceDto result = serviceService.updateService(1L, serviceDto);
 
         // Then: Hizmet güncellenir
         assertThat(result).isNotNull();
@@ -274,7 +274,7 @@ class ServiceServiceTest {
                 .thenReturn(true);
 
         // When & Then: Exception fırlatılır
-        assertThatThrownBy(() -> serviceService.updateService(1L, serviceDto, 1L))
+        assertThatThrownBy(() -> serviceService.updateService(1L, serviceDto))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("hizmet adı başka bir hizmet tarafından kullanılıyor");
 

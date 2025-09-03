@@ -1,7 +1,9 @@
 package com.example.barber.automation.controller;
 
 import com.example.barber.automation.dto.CreateTenantRequest;
+import com.example.barber.automation.dto.CreateTenantSimpleRequest;
 import com.example.barber.automation.dto.DashboardStats;
+import com.example.barber.automation.dto.TenantDto;
 import com.example.barber.automation.entity.Tenant;
 import com.example.barber.automation.entity.TenantUser;
 import com.example.barber.automation.service.AdminService;
@@ -19,6 +21,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Admin panel işlemleri için controller
@@ -53,7 +56,7 @@ public class AdminController {
      */
     @GetMapping("/tenants")
     @Operation(summary = "Tenant listesi", description = "Tüm kuaförleri sayfalama ile listeler")
-    public ResponseEntity<Page<Tenant>> getAllTenants(
+    public ResponseEntity<List<TenantDto>> getAllTenants(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -66,7 +69,25 @@ public class AdminController {
             Pageable pageable = PageRequest.of(page, size, sort);
             Page<Tenant> tenants = adminService.getAllTenants(pageable);
             
-            return ResponseEntity.ok(tenants);
+            // Tenant'ları DTO'ya çevir
+            List<TenantDto> tenantDtos = tenants.getContent().stream()
+                .map(tenant -> {
+                    TenantDto dto = new TenantDto();
+                    dto.setId(tenant.getId());
+                    dto.setName(tenant.getName());
+                    dto.setPhoneNumber(tenant.getPhoneNumber());
+                    dto.setAddress(tenant.getAddress());
+                    dto.setEmail(tenant.getEmail());
+                    dto.setTimezone(tenant.getTimezone());
+                    dto.setLogoUrl(tenant.getLogoUrl());
+                    dto.setActive(tenant.getActive());
+                    dto.setCreatedAt(tenant.getCreatedAt());
+                    dto.setUpdatedAt(tenant.getUpdatedAt());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(tenantDtos);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }
@@ -97,6 +118,20 @@ public class AdminController {
             return ResponseEntity.ok(tenant);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Tenant bulunamadı: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Yeni tenant oluştur (basit)
+     */
+    @PostMapping("/tenants/simple")
+    @Operation(summary = "Yeni tenant oluştur (basit)", description = "Sadece kuaför oluşturur, admin kullanıcı oluşturmaz")
+    public ResponseEntity<?> createTenantSimple(@Valid @RequestBody CreateTenantSimpleRequest request) {
+        try {
+            Tenant tenant = adminService.createTenantSimple(request);
+            return ResponseEntity.ok(tenant);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Tenant oluşturulamadı: " + e.getMessage());
         }
     }
 

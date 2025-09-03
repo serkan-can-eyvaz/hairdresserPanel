@@ -33,6 +33,21 @@ public class Tenant {
     @Column(length = 200)
     private String address;
     
+    @Column(length = 100)
+    private String city; // Şehir
+    
+    @Column(length = 100)
+    private String district; // İlçe
+
+    @Column(length = 100)
+    private String neighborhood; // Mahalle
+
+    @Column(length = 300)
+    private String addressDetail; // Adres detayı (cadde/kapı no vb.)
+    
+    @Column(length = 500)
+    private String description;
+    
     @Column(length = 50)
     private String timezone = "Europe/Istanbul";
     
@@ -41,6 +56,16 @@ public class Tenant {
     
     @Column(length = 500)
     private String logoUrl;
+    
+    // Çalışma saatleri
+    @Column(length = 10)
+    private String workingHoursStart = "08:00"; // Başlangıç saati (HH:MM formatında)
+    
+    @Column(length = 10)
+    private String workingHoursEnd = "22:00"; // Bitiş saati (HH:MM formatında)
+    
+    @Column(nullable = false)
+    private Integer breakMinutes = 10; // Randevular arası mola süresi (dakika)
     
     @Column(nullable = false)
     private Boolean active = true;
@@ -110,6 +135,54 @@ public class Tenant {
         this.address = address;
     }
     
+    public String getCity() {
+        return city;
+    }
+    
+    public void setCity(String city) {
+        this.city = city;
+    }
+    
+    public String getDistrict() {
+        return district;
+    }
+    
+    public void setDistrict(String district) {
+        this.district = district;
+    }
+
+    public String getNeighborhood() {
+        return neighborhood;
+    }
+
+    public void setNeighborhood(String neighborhood) {
+        this.neighborhood = neighborhood;
+    }
+
+    public String getAddressDetail() {
+        return addressDetail;
+    }
+
+    public void setAddressDetail(String addressDetail) {
+        this.addressDetail = addressDetail;
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
+    public String getPhone() {
+        return phoneNumber;
+    }
+    
+    public void setPhone(String phone) {
+        this.phoneNumber = phone;
+    }
+    
     public String getTimezone() {
         return timezone;
     }
@@ -132,6 +205,30 @@ public class Tenant {
     
     public void setLogoUrl(String logoUrl) {
         this.logoUrl = logoUrl;
+    }
+    
+    public String getWorkingHoursStart() {
+        return workingHoursStart;
+    }
+    
+    public void setWorkingHoursStart(String workingHoursStart) {
+        this.workingHoursStart = workingHoursStart;
+    }
+    
+    public String getWorkingHoursEnd() {
+        return workingHoursEnd;
+    }
+    
+    public void setWorkingHoursEnd(String workingHoursEnd) {
+        this.workingHoursEnd = workingHoursEnd;
+    }
+    
+    public Integer getBreakMinutes() {
+        return breakMinutes;
+    }
+    
+    public void setBreakMinutes(Integer breakMinutes) {
+        this.breakMinutes = breakMinutes;
     }
     
     public Boolean getActive() {

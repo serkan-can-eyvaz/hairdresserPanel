@@ -20,9 +20,16 @@ public class TenantDto {
     private String phoneNumber;
     
     private String address;
+    private String city;
+    private String district;
+    private String neighborhood;
+    private String addressDetail;
     private String timezone;
     private String email;
     private String logoUrl;
+    private String workingHoursStart;
+    private String workingHoursEnd;
+    private Integer breakMinutes;
     private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -68,6 +75,18 @@ public class TenantDto {
     public void setAddress(String address) {
         this.address = address;
     }
+
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+
+    public String getDistrict() { return district; }
+    public void setDistrict(String district) { this.district = district; }
+
+    public String getNeighborhood() { return neighborhood; }
+    public void setNeighborhood(String neighborhood) { this.neighborhood = neighborhood; }
+
+    public String getAddressDetail() { return addressDetail; }
+    public void setAddressDetail(String addressDetail) { this.addressDetail = addressDetail; }
     
     public String getTimezone() {
         return timezone;
@@ -91,6 +110,30 @@ public class TenantDto {
     
     public void setLogoUrl(String logoUrl) {
         this.logoUrl = logoUrl;
+    }
+    
+    public String getWorkingHoursStart() {
+        return workingHoursStart;
+    }
+    
+    public void setWorkingHoursStart(String workingHoursStart) {
+        this.workingHoursStart = workingHoursStart;
+    }
+    
+    public String getWorkingHoursEnd() {
+        return workingHoursEnd;
+    }
+    
+    public void setWorkingHoursEnd(String workingHoursEnd) {
+        this.workingHoursEnd = workingHoursEnd;
+    }
+    
+    public Integer getBreakMinutes() {
+        return breakMinutes;
+    }
+    
+    public void setBreakMinutes(Integer breakMinutes) {
+        this.breakMinutes = breakMinutes;
     }
     
     public Boolean getActive() {

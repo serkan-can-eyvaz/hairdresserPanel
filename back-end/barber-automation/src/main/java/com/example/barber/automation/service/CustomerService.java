@@ -58,6 +58,23 @@ public class CustomerService {
     }
     
     /**
+     * Tenant'a ait aktif müşterileri listeleme (Controller için)
+     */
+    public List<CustomerDto> findAllByTenantId(Long tenantId) {
+        return findAllByTenant(tenantId);
+    }
+    
+    /**
+     * Tüm aktif müşterileri listeleme
+     */
+    public List<CustomerDto> findAll() {
+        return customerRepository.findByActiveTrueOrderByNameAsc()
+                .stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+    
+    /**
      * Müşteri adına göre arama
      */
     public List<CustomerDto> searchByName(String name, Long tenantId) {
@@ -94,15 +111,26 @@ public class CustomerService {
      * WhatsApp'tan gelen müşteri oluşturma (otomatik)
      */
     public CustomerDto createCustomerFromWhatsApp(String name, String phoneNumber, Long tenantId) {
+        // Telefon numarasını temizle (WhatsApp formatından)
+        String cleanPhoneNumber = phoneNumber
+            .replace("whatsapp%3A%2B", "")
+            .replace("whatsapp:", "")
+            .replace("%3A", ":")
+            .replace("%2B", "+");
+        
+        if (!cleanPhoneNumber.startsWith("+")) {
+            cleanPhoneNumber = "+" + cleanPhoneNumber;
+        }
+        
         // Mevcut müşteri kontrolü
-        Optional<Customer> existingCustomer = customerRepository.findByPhoneNumberAndTenantId(phoneNumber, tenantId);
+        Optional<Customer> existingCustomer = customerRepository.findByPhoneNumberAndTenantId(cleanPhoneNumber, tenantId);
         if (existingCustomer.isPresent()) {
             return convertToDto(existingCustomer.get());
         }
         
         CustomerDto customerDto = new CustomerDto();
         customerDto.setName(name != null ? name : "WhatsApp Müşteri");
-        customerDto.setPhoneNumber(phoneNumber);
+        customerDto.setPhoneNumber(cleanPhoneNumber);
         customerDto.setAllowNotifications(true);
         
         return createCustomer(customerDto, tenantId);
@@ -143,6 +171,13 @@ public class CustomerService {
         
         customer.setActive(false);
         customerRepository.save(customer);
+    }
+    
+    /**
+     * Müşteriyi sil (soft delete) - Controller için
+     */
+    public void deleteCustomer(Long id, Long tenantId) {
+        deactivateCustomer(id, tenantId);
     }
     
     /**

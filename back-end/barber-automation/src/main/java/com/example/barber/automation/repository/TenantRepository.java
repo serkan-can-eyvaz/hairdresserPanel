@@ -21,6 +21,11 @@ public interface TenantRepository extends JpaRepository<Tenant, Long> {
     Optional<Tenant> findByPhoneNumber(String phoneNumber);
     
     /**
+     * Kuaför adına göre bulma
+     */
+    Optional<Tenant> findByName(String name);
+    
+    /**
      * Aktif kuaförleri listeleme
      */
     List<Tenant> findByActiveTrue();
@@ -66,4 +71,16 @@ public interface TenantRepository extends JpaRepository<Tenant, Long> {
      * Aktif kuaförleri oluşturulma tarihine göre sıralı getirme
      */
     List<Tenant> findByActiveTrueOrderByCreatedAtDesc();
+    
+    /**
+     * Şehir ve ilçeye göre aktif kuaförleri bulma
+     */
+    @Query("SELECT t FROM Tenant t WHERE LOWER(t.city) = LOWER(:city) AND LOWER(t.district) = LOWER(:district) AND t.active = true")
+    List<Tenant> findByCityAndDistrictAndActiveTrue(@Param("city") String city, @Param("district") String district);
+    
+    /**
+     * Şehre göre aktif kuaförleri bulma
+     */
+    @Query("SELECT t FROM Tenant t WHERE LOWER(t.city) = LOWER(:city) AND t.active = true")
+    List<Tenant> findByCityAndActiveTrue(@Param("city") String city);
 }
