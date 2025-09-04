@@ -157,25 +157,47 @@ public class TenantService {
         tenant.setDistrict(request.getDistrict());
         tenant.setNeighborhood(request.getNeighborhood());
         tenant.setAddressDetail(request.getAddressDetail());
+        tenant.setWorkingHoursStart(request.getWorkingHoursStart());
+        tenant.setWorkingHoursEnd(request.getWorkingHoursEnd());
+        tenant.setBreakMinutes(request.getBreakMinutes());
         tenant.setActive(true);
+        
+        // Debug log'ları
+        System.out.println("=== TENANT OLUŞTURMA DEBUG ===");
+        System.out.println("Request City: " + request.getCity());
+        System.out.println("Request District: " + request.getDistrict());
+        System.out.println("Request Neighborhood: " + request.getNeighborhood());
+        System.out.println("Request AddressDetail: " + request.getAddressDetail());
+        System.out.println("Request WorkingHoursStart: " + request.getWorkingHoursStart());
+        System.out.println("Request WorkingHoursEnd: " + request.getWorkingHoursEnd());
+        System.out.println("Request BreakMinutes: " + request.getBreakMinutes());
+        System.out.println("Tenant City: " + tenant.getCity());
+        System.out.println("Tenant District: " + tenant.getDistrict());
+        System.out.println("Tenant Neighborhood: " + tenant.getNeighborhood());
+        System.out.println("Tenant AddressDetail: " + tenant.getAddressDetail());
+        System.out.println("Tenant WorkingHoursStart: " + tenant.getWorkingHoursStart());
+        System.out.println("Tenant WorkingHoursEnd: " + tenant.getWorkingHoursEnd());
+        System.out.println("Tenant BreakMinutes: " + tenant.getBreakMinutes());
+        System.out.println("=== TENANT OLUŞTURMA DEBUG SON ===");
         
         Tenant savedTenant = tenantRepository.save(tenant);
         
         // Hizmetleri oluştur
         for (CreateTenantRequest.ServicePrice servicePrice : request.getServices()) {
-            com.example.barber.automation.entity.Service originalService = serviceRepository.findById(servicePrice.getServiceId())
+            // Genel hizmeti bul
+            com.example.barber.automation.entity.Service generalService = serviceRepository.findById(servicePrice.getServiceId())
                     .orElseThrow(() -> new IllegalArgumentException("Hizmet bulunamadı: " + servicePrice.getServiceId()));
             
-            // Yeni hizmet oluştur (kuaföre özel)
+            // Kuaföre özel hizmet oluştur
             com.example.barber.automation.entity.Service tenantService = new com.example.barber.automation.entity.Service();
-            tenantService.setName(originalService.getName());
-            tenantService.setDescription(originalService.getDescription());
-            tenantService.setDurationMinutes(originalService.getDurationMinutes());
+            tenantService.setName(generalService.getName());
+            tenantService.setDescription(generalService.getDescription());
+            tenantService.setDurationMinutes(generalService.getDurationMinutes());
             tenantService.setPrice(java.math.BigDecimal.valueOf(servicePrice.getPrice()));
             tenantService.setCurrency(servicePrice.getCurrency());
             tenantService.setTenant(savedTenant);
             tenantService.setActive(true);
-            tenantService.setSortOrder(originalService.getSortOrder());
+            tenantService.setSortOrder(generalService.getSortOrder());
             
             serviceRepository.save(tenantService);
         }
@@ -301,9 +323,26 @@ public class TenantService {
         dto.setTimezone(tenant.getTimezone());
         dto.setEmail(tenant.getEmail());
         dto.setLogoUrl(tenant.getLogoUrl());
+        dto.setWorkingHoursStart(tenant.getWorkingHoursStart());
+        dto.setWorkingHoursEnd(tenant.getWorkingHoursEnd());
+        dto.setBreakMinutes(tenant.getBreakMinutes());
         dto.setActive(tenant.getActive());
         dto.setCreatedAt(tenant.getCreatedAt());
         dto.setUpdatedAt(tenant.getUpdatedAt());
+        
+        // Debug log'ları
+        System.out.println("=== CONVERT TO DTO DEBUG ===");
+        System.out.println("Tenant ID: " + tenant.getId());
+        System.out.println("Tenant City: " + tenant.getCity());
+        System.out.println("Tenant District: " + tenant.getDistrict());
+        System.out.println("Tenant Neighborhood: " + tenant.getNeighborhood());
+        System.out.println("Tenant AddressDetail: " + tenant.getAddressDetail());
+        System.out.println("DTO City: " + dto.getCity());
+        System.out.println("DTO District: " + dto.getDistrict());
+        System.out.println("DTO Neighborhood: " + dto.getNeighborhood());
+        System.out.println("DTO AddressDetail: " + dto.getAddressDetail());
+        System.out.println("=== CONVERT TO DTO DEBUG SON ===");
+        
         return dto;
     }
     
@@ -319,6 +358,9 @@ public class TenantService {
         tenant.setTimezone(dto.getTimezone() != null ? dto.getTimezone() : "Europe/Istanbul");
         tenant.setEmail(dto.getEmail());
         tenant.setLogoUrl(dto.getLogoUrl());
+        tenant.setWorkingHoursStart(dto.getWorkingHoursStart());
+        tenant.setWorkingHoursEnd(dto.getWorkingHoursEnd());
+        tenant.setBreakMinutes(dto.getBreakMinutes());
         return tenant;
     }
 }

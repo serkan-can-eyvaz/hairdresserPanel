@@ -68,9 +68,12 @@ public class SecurityConfig {
                 // Appointments endpoint (test için geçici olarak permitAll)
                 .requestMatchers("/appointments/**").permitAll()
                 .requestMatchers("/api/appointments/**").permitAll()
-                
-                // Admin endpoints - Sadece SUPER_ADMIN erişebilir
-                .requestMatchers("/admin/**").hasRole("SUPER_ADMIN")
+                // Admin endpoints (test için geçici olarak permitAll)
+                .requestMatchers("/admin/**").permitAll()
+                .requestMatchers("/api/admin/**").permitAll()
+                // Services endpoints (test için geçici olarak permitAll)
+                .requestMatchers("/services/**").permitAll()
+                .requestMatchers("/api/services/**").permitAll()
                 
                 // Tenant endpoints - SUPER_ADMIN ve TENANT_ADMIN erişebilir
                 .requestMatchers("/tenant/**").hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN")

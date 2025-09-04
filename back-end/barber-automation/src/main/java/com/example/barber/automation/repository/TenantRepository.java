@@ -73,14 +73,14 @@ public interface TenantRepository extends JpaRepository<Tenant, Long> {
     List<Tenant> findByActiveTrueOrderByCreatedAtDesc();
     
     /**
-     * Şehir ve ilçeye göre aktif kuaförleri bulma
+     * Şehir ve ilçeye göre aktif kuaförleri bulma (sistem kuaförü hariç)
      */
-    @Query("SELECT t FROM Tenant t WHERE LOWER(t.city) = LOWER(:city) AND LOWER(t.district) = LOWER(:district) AND t.active = true")
+    @Query("SELECT t FROM Tenant t WHERE LOWER(t.city) = LOWER(:city) AND LOWER(t.district) = LOWER(:district) AND t.active = true AND t.id != 1")
     List<Tenant> findByCityAndDistrictAndActiveTrue(@Param("city") String city, @Param("district") String district);
     
     /**
-     * Şehre göre aktif kuaförleri bulma
+     * Şehre göre aktif kuaförleri bulma (sistem kuaförü hariç)
      */
-    @Query("SELECT t FROM Tenant t WHERE LOWER(t.city) = LOWER(:city) AND t.active = true")
+    @Query("SELECT t FROM Tenant t WHERE LOWER(t.city) = LOWER(:city) AND t.active = true AND t.id != 1")
     List<Tenant> findByCityAndActiveTrue(@Param("city") String city);
 }

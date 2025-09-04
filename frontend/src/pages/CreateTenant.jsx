@@ -40,8 +40,8 @@ const CreateTenant = () => {
           setCities(Array.isArray(citiesData) ? citiesData : []);
         }
 
-        // Hizmetleri yükle (tenant ID 1'den - genel hizmetler)
-        const servicesResponse = await fetch(`${apiBase}/services/tenant/1`, {
+        // Genel hizmetleri yükle
+        const servicesResponse = await fetch(`${apiBase}/services/general`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -218,7 +218,9 @@ const CreateTenant = () => {
         }))
       };
 
-      const response = await fetch('http://localhost:8080/api/tenants', {
+      console.log('Gönderilen form data:', requestData);
+
+      const response = await fetch('http://localhost:8080/api/admin/tenants', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

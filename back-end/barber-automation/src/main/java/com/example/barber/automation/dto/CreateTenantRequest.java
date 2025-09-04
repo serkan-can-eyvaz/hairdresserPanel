@@ -26,6 +26,9 @@ public class CreateTenantRequest {
     private String district;
     private String neighborhood;
     private String addressDetail;
+    private String workingHoursStart;
+    private String workingHoursEnd;
+    private Integer breakMinutes;
     
     @NotEmpty(message = "En az bir hizmet seçmelisiniz")
     @Valid
@@ -102,6 +105,30 @@ public class CreateTenantRequest {
     
     public void setAddressDetail(String addressDetail) {
         this.addressDetail = addressDetail;
+    }
+    
+    public String getWorkingHoursStart() {
+        return workingHoursStart;
+    }
+    
+    public void setWorkingHoursStart(String workingHoursStart) {
+        this.workingHoursStart = workingHoursStart;
+    }
+    
+    public String getWorkingHoursEnd() {
+        return workingHoursEnd;
+    }
+    
+    public void setWorkingHoursEnd(String workingHoursEnd) {
+        this.workingHoursEnd = workingHoursEnd;
+    }
+    
+    public Integer getBreakMinutes() {
+        return breakMinutes;
+    }
+    
+    public void setBreakMinutes(Integer breakMinutes) {
+        this.breakMinutes = breakMinutes;
     }
     
     public List<ServicePrice> getServices() {

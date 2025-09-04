@@ -41,6 +41,20 @@ public class ServiceController {
     }
 
     /**
+     * Genel hizmet listesi (kuaför eklerken seçim için)
+     */
+    @GetMapping("/general")
+    @Operation(summary = "Genel hizmet listesi", description = "Kuaför eklerken seçim yapılacak genel hizmet listesi")
+    public ResponseEntity<List<ServiceDto>> getGeneralServices() {
+        try {
+            List<ServiceDto> services = serviceService.findAllByTenant(1L); // Tenant ID 1 = Sistem Yönetimi
+            return ResponseEntity.ok(services);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
      * Hizmet adına göre arama
      */
     @GetMapping("/tenant/{tenantId}/search")

@@ -27,15 +27,18 @@ public class WhatsAppWebhookController {
     
     private final WhatsAppService whatsAppService;
     private final WhatsAppBotService whatsAppBotService;
+    private final com.example.barber.automation.service.conversation.ConversationOrchestrator conversationOrchestrator;
     
     @Value("${whatsapp.api.webhook-verify-token}")
     private String webhookVerifyToken;
     
     @Autowired
     public WhatsAppWebhookController(WhatsAppService whatsAppService, 
-                                   WhatsAppBotService whatsAppBotService) {
+                                   WhatsAppBotService whatsAppBotService,
+                                   com.example.barber.automation.service.conversation.ConversationOrchestrator conversationOrchestrator) {
         this.whatsAppService = whatsAppService;
         this.whatsAppBotService = whatsAppBotService;
+        this.conversationOrchestrator = conversationOrchestrator;
     }
     
     /**
@@ -62,7 +65,7 @@ public class WhatsAppWebhookController {
             );
             
             // Ana webhook endpoint'ini kullan
-            return receiveMessage(mockRawBody);
+            return receiveMessage(mockRawBody, tenantId);
         } catch (Exception e) {
             logger.error("Mock mesaj işleme hatası: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body("Hata: " + e.getMessage());
@@ -95,7 +98,9 @@ public class WhatsAppWebhookController {
      */
     @PostMapping
     @Operation(summary = "WhatsApp mesajları", description = "WhatsApp'tan gelen mesajları işler")
-    public ResponseEntity<String> receiveMessage(@RequestBody String rawBody) {
+    public ResponseEntity<String> receiveMessage(
+            @RequestBody String rawBody,
+            @RequestParam(value = "tenantId", defaultValue = "1") Long tenantId) {
         try {
             logger.info("WhatsApp webhook raw body alındı: {}", rawBody);
             
@@ -109,9 +114,21 @@ public class WhatsAppWebhookController {
                     }
                 }
             } else {
-                // Twilio formatı - direkt bot servisine gönder
-                logger.info("Twilio formatı tespit edildi, bot servisine yönlendiriliyor");
-                whatsAppBotService.processIncomingMessage(rawBody);
+                // Twilio formatı - Orchestrator üzerinden AI akışı
+                logger.info("Twilio formatı tespit edildi, orchestrator akışına yönlendiriliyor");
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.JsonNode json = mapper.readTree(rawBody);
+                    String from = json.get("From").asText().replace("whatsapp:", "").trim();
+                    String body = json.get("Body").asText();
+                    var aiResp = conversationOrchestrator.handleIncoming(from, tenantId, body);
+                    if (aiResp != null && aiResp.getReply() != null) {
+                        whatsAppService.sendMessage(from, aiResp.getReply(), tenantId);
+                    }
+                } catch (Exception e) {
+                    logger.warn("Orchestrator başarısız, eski akışa düşülüyor: {}", e.getMessage());
+                    whatsAppBotService.processIncomingMessage(rawBody, tenantId);
+                }
             }
             
             return ResponseEntity.ok("EVENT_RECEIVED");

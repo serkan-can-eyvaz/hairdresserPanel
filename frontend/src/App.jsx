@@ -16,6 +16,7 @@ import Reports from './pages/Reports';
 import Subscriptions from './pages/Subscriptions';
 import Settings from './pages/Settings';
 import Appointments from './pages/Appointments';
+import BookAppointment from './pages/BookAppointment';
 import Customers from './pages/Customers';
 
 // Protected Route component
@@ -154,6 +155,15 @@ const AppContent = () => {
               <AppLayout>
                 <Appointments />
               </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/appointments/book"
+          element={
+            <ProtectedRoute>
+              <BookAppointment />
             </ProtectedRoute>
           }
         />
