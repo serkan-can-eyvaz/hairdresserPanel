@@ -11,6 +11,7 @@ class ToolService:
     
     def __init__(self):
         self.backend_url = settings.backend_url or "http://localhost:8080"
+        self._http_timeout = 10
     
     async def search_tenant(self, query: str) -> Dict[str, Any]:
         """
@@ -131,6 +132,45 @@ class ToolService:
                 "appointment": appointment_data,
                 "message": f"Randevu başarıyla oluşturuldu! {customer_name} için {date} {time}"
             }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def list_tenants_by_location_sync(self, city: str, district: Optional[str] = None) -> Dict[str, Any]:
+        """Şehir/ilçe bazlı kuaförleri backend'den çeker (senkron)."""
+        try:
+            params = {"city": city}
+            if district:
+                params["district"] = district
+            with httpx.Client() as client:
+                response = client.get(f"{self.backend_url}/api/tenants/by-location", params=params, timeout=self._http_timeout)
+                if response.status_code == 200:
+                    tenants = response.json()
+                    return {"success": True, "tenants": tenants, "count": len(tenants)}
+                return {"success": False, "error": f"Backend error: {response.status_code}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def list_cities_sync(self) -> Dict[str, Any]:
+        """Backend'den şehir listesini çeker (senkron)."""
+        try:
+            with httpx.Client() as client:
+                response = client.get(f"{self.backend_url}/api/locations/cities", timeout=self._http_timeout)
+                if response.status_code == 200:
+                    cities = response.json()
+                    return {"success": True, "cities": cities, "count": len(cities)}
+                return {"success": False, "error": f"Backend error: {response.status_code}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def list_districts_sync(self, city: str) -> Dict[str, Any]:
+        """Seçili şehir için ilçe listesini çeker (senkron)."""
+        try:
+            with httpx.Client() as client:
+                response = client.get(f"{self.backend_url}/api/locations/districts", params={"city": city}, timeout=self._http_timeout)
+                if response.status_code == 200:
+                    districts = response.json()
+                    return {"success": True, "districts": districts, "count": len(districts)}
+                return {"success": False, "error": f"Backend error: {response.status_code}"}
         except Exception as e:
             return {"success": False, "error": str(e)}
 

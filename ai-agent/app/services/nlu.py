@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any
 from ..core.config import settings
 from .tools import get_tool_service
+import re
 
 try:
     from openai import OpenAI  # type: ignore
@@ -24,6 +25,22 @@ class NLUService:
         
         # Session storage for conversation state
         self.sessions = {}
+
+    def _parse_location(self, text: str) -> tuple[str, Optional[str]]:
+        """Parse user location string to (city, district). Accepts 'City, District' or 'City District'."""
+        raw = text.strip()
+        if "," in raw:
+            parts = [p.strip() for p in raw.split(",", 1)]
+            city = parts[0]
+            district = parts[1] if len(parts) > 1 and parts[1] else None
+            return city, district
+        # Fallback: split by whitespace into two tokens
+        tokens = re.split(r"\s+", raw)
+        if len(tokens) >= 2:
+            city = tokens[0]
+            district = " ".join(tokens[1:])
+            return city, district
+        return raw, None
 
     def process_message(self, message: str, tenant_id: int, from_number: str) -> Dict[str, Any]:
         """Process message with advanced AI understanding and context awareness."""
@@ -51,7 +68,6 @@ class NLUService:
             return self._rule_based_fallback(message, session)
 
         try:
-            # Advanced prompt engineering with session context
             system_prompt = self._create_system_prompt()
             user_prompt = self._create_user_prompt(message, tenant_id, from_number, session)
             
@@ -63,53 +79,65 @@ class NLUService:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                tools=[{
-                    "type": "function",
-                    "function": {
-                        "name": "process_appointment_request",
-                        "description": "Process appointment request with context awareness",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "intent": {
-                                    "type": "string",
-                                    "enum": ["greeting", "appointment_start", "provide_location", "select_barber", "provide_name", "provide_service", "provide_date", "provide_time", "confirm_appointment", "cancel_appointment", "unknown"],
-                                    "description": "The intent of the user message"
-                                },
-                                "reply": {
-                                    "type": "string",
-                                    "description": "Natural, friendly response in Turkish with emojis"
-                                },
-                                "next_state": {
-                                    "type": "string",
-                                    "enum": ["awaiting_location", "awaiting_barber_selection", "awaiting_name", "awaiting_service", "awaiting_date", "awaiting_time", "awaiting_confirmation", "completed"],
-                                    "description": "Next expected state in the conversation flow"
-                                },
-                                "extracted_info": {
-                                    "type": "object",
-                                    "properties": {
-                                        "customer_name": {"type": "string", "description": "Extracted customer name if provided"},
-                                        "location_preference": {"type": "string", "description": "Extracted location preference (city/district) if mentioned"},
-                                        "barber_selection": {"type": "string", "description": "Selected barber name or number if mentioned"},
-                                        "service_preference": {"type": "string", "description": "Extracted service preference if mentioned"},
-                                        "date_preference": {"type": "string", "description": "Extracted date preference if mentioned"},
-                                        "time_preference": {"type": "string", "description": "Extracted time preference if mentioned"}
-                                    }
-                                }
-                            },
-                            "required": ["intent", "reply"]
-                        }
-                    }
-                }],
+                tools=[{ "type": "function", "function": { "name": "process_appointment_request", "description": "Process appointment request with context awareness", "parameters": { "type": "object", "properties": { "intent": { "type": "string", "enum": ["greeting", "appointment_start", "provide_location", "select_barber", "provide_name", "provide_service", "provide_date", "provide_time", "confirm_appointment", "cancel_appointment", "unknown"] }, "reply": { "type": "string" }, "next_state": { "type": "string", "enum": ["awaiting_location", "awaiting_barber_selection", "awaiting_name", "awaiting_service", "awaiting_date", "awaiting_time", "awaiting_confirmation", "completed"] }, "extracted_info": { "type": "object", "properties": { "customer_name": {"type": "string"}, "location_preference": {"type": "string"}, "barber_selection": {"type": "string"}, "service_preference": {"type": "string"}, "date_preference": {"type": "string"}, "time_preference": {"type": "string"} } } }, "required": ["intent", "reply"] } } }],
                 tool_choice={"type": "function", "function": {"name": "process_appointment_request"}}
             )
             
-            # Parse tool call response
-            tool_call = response.choices[0].message.tool_calls[0]
-            import json
-            result = json.loads(tool_call.function.arguments)
-            
-            # Update session state
+            # Parse tool call response (fallback to content if tools absent)
+            result = {"ok": True, "intent": "unknown", "reply": "", "extracted_info": {}}
+            tool_calls = response.choices[0].message.tool_calls
+            if tool_calls and len(tool_calls) > 0:
+                import json
+                result = json.loads(tool_calls[0].function.arguments)
+            else:
+                # Minimal parse from content
+                content = response.choices[0].message.content or ""
+                result["reply"] = content
+
+            # Always enforce real DB listing when location is provided or expected
+            should_list = result.get("intent") == "provide_location" or current_state == "awaiting_location"
+            loc = result.get("extracted_info", {}).get("location_preference") if isinstance(result.get("extracted_info"), dict) else None
+            if not loc and ("," in message or " " in message) and should_list:
+                city, district = self._parse_location(message)
+            else:
+                city, district = self._parse_location(loc) if loc else (None, None)
+
+            if city:
+                tools = get_tool_service()
+                data = tools.list_tenants_by_location_sync(city, district)
+                if data.get("success"):
+                    tenants = data.get("tenants", [])
+                    extracted = result.get("extracted_info", {}) or {}
+                    # Put options even if empty; agent can phrase accordingly
+                    options = []
+                    for t in tenants:
+                        options.append({"id": t.get("id"), "name": t.get("name"), "address": t.get("neighborhood") or t.get("address") or ""})
+                    extracted["barber_options"] = options
+                    extracted["location_preference"] = f"{city}{(', ' + district) if district else ''}"
+                    result["extracted_info"] = extracted
+                    result["next_state"] = "awaiting_barber_selection" if options else "awaiting_location"
+
+                    # Let GPT phrase the reply using real options
+                    options_text = "\n".join([f"{i+1}. {o['name']} - {o['address']}" for i, o in enumerate(options)]) or "(Bu bölgede aktif kuaför bulunamadı)"
+                    phrasing_prompt = (
+                        "Aşağıdaki gerçek kuaför listesini kullanarak Türkçe, samimi ve kısa bir yanıt yaz. "
+                        "Eğer liste boş ise nazikçe bu bölgede aktif kuaför bulunmadığını söyle ve farklı bölge iste. "
+                        "Liste dolu ise kullanıcıya numara ile seçim yapmasını söyle.\n\n"
+                        f"Bölge: {city}{(', ' + district) if district else ''}\n"
+                        f"Kuaförler:\n{options_text}"
+                    )
+                    phrasing = self.client.chat.completions.create(
+                        model=settings.openai_model,
+                        temperature=0.6,
+                        max_tokens=250,
+                        messages=[
+                            {"role": "system", "content": "Profesyonel kuaför randevu asistanısın."},
+                            {"role": "user", "content": phrasing_prompt}
+                        ]
+                    )
+                    result["reply"] = phrasing.choices[0].message.content or result.get("reply", "")
+
+            # Update session
             self._update_session(session, result, message)
             
             return {

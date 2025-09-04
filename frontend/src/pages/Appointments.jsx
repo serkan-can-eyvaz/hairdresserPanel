@@ -221,6 +221,13 @@ const Appointments = () => {
         </div>
         <div className="flex items-center space-x-3">
           <button
+            onClick={() => window.location.href = '/appointments/book'}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Yeni Randevu
+          </button>
+          <button
             onClick={fetchData}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
           >

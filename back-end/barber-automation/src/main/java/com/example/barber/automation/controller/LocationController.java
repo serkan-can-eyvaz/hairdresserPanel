@@ -72,29 +72,30 @@ public class LocationController {
                          ", Mahalle eşleşmeleri: " + districtNeighborhoods.size());
     }
 
-    private void loadCities() throws IOException {
+    private synchronized void loadCities() throws IOException {
         ClassPathResource resource = new ClassPathResource("locations/sehirler.json");
         JsonNode citiesNode = objectMapper.readTree(resource.getInputStream());
         
-        cities = new ArrayList<>();
+        List<String> tempCities = new ArrayList<>();
         if (citiesNode.isArray()) {
             for (JsonNode cityNode : citiesNode) {
                 String cityName = cityNode.get("sehir_adi").asText();
                 if (cityName != null && !cityName.trim().isEmpty()) {
                     // Büyük harfleri düzelt
                     cityName = capitalizeFirstLetter(cityName.toLowerCase());
-                    cities.add(cityName);
+                    tempCities.add(cityName);
                 }
             }
         }
-        Collections.sort(cities);
+        tempCities.sort(String.CASE_INSENSITIVE_ORDER);
+        cities = tempCities;
     }
 
-    private void loadDistricts() throws IOException {
+    private synchronized void loadDistricts() throws IOException {
         ClassPathResource resource = new ClassPathResource("locations/ilceler.json");
         JsonNode districtsNode = objectMapper.readTree(resource.getInputStream());
         
-        cityDistricts = new HashMap<>();
+        Map<String, List<String>> tempCityDistricts = new HashMap<>();
         if (districtsNode.isArray()) {
             for (JsonNode districtNode : districtsNode) {
                 String cityName = districtNode.get("sehir_adi").asText();
@@ -105,19 +106,20 @@ public class LocationController {
                     cityName = capitalizeFirstLetter(cityName.toLowerCase());
                     districtName = capitalizeFirstLetter(districtName.toLowerCase());
                     
-                    cityDistricts.computeIfAbsent(cityName, k -> new ArrayList<>()).add(districtName);
+                    tempCityDistricts.computeIfAbsent(cityName, k -> new ArrayList<>()).add(districtName);
                 }
             }
         }
         
         // İlçeleri alfabetik sırala
-        for (List<String> districts : cityDistricts.values()) {
-            Collections.sort(districts);
+        for (List<String> districts : tempCityDistricts.values()) {
+            districts.sort(String.CASE_INSENSITIVE_ORDER);
         }
+        cityDistricts = tempCityDistricts;
     }
 
-    private void loadNeighborhoods() throws IOException {
-        districtNeighborhoods = new HashMap<>();
+    private synchronized void loadNeighborhoods() throws IOException {
+        Map<String, List<String>> tempDistrictNeighborhoods = new HashMap<>();
         
         String[] neighborhoodFiles = {
             "locations/mahalleler-1.json",
@@ -144,7 +146,7 @@ public class LocationController {
                             neighborhoodName = capitalizeFirstLetter(neighborhoodName.toLowerCase());
                             
                             String key = cityName + "_" + districtName;
-                            districtNeighborhoods.computeIfAbsent(key, k -> new ArrayList<>()).add(neighborhoodName);
+                            tempDistrictNeighborhoods.computeIfAbsent(key, k -> new ArrayList<>()).add(neighborhoodName);
                         }
                     }
                 }
@@ -154,9 +156,10 @@ public class LocationController {
         }
         
         // Mahalleleri alfabetik sırala
-        for (List<String> neighborhoods : districtNeighborhoods.values()) {
-            Collections.sort(neighborhoods);
+        for (List<String> neighborhoods : tempDistrictNeighborhoods.values()) {
+            neighborhoods.sort(String.CASE_INSENSITIVE_ORDER);
         }
+        districtNeighborhoods = tempDistrictNeighborhoods;
     }
 
     private String capitalizeFirstLetter(String text) {

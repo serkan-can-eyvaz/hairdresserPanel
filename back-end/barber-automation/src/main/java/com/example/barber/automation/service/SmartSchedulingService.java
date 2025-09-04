@@ -1,7 +1,6 @@
 package com.example.barber.automation.service;
 
 import com.example.barber.automation.entity.Appointment;
-import com.example.barber.automation.entity.Service;
 import com.example.barber.automation.entity.Tenant;
 import com.example.barber.automation.repository.AppointmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +30,7 @@ public class SmartSchedulingService {
      * @param date Tarih
      * @return Uygun saatlerin listesi
      */
-    public List<LocalTime> getAvailableTimeSlots(Tenant tenant, Service service, LocalDate date) {
+    public List<LocalTime> getAvailableTimeSlots(Tenant tenant, com.example.barber.automation.entity.Service service, LocalDate date) {
         List<LocalTime> availableSlots = new ArrayList<>();
         
         // Çalışma saatlerini parse et
@@ -115,7 +114,7 @@ public class SmartSchedulingService {
      * @param tenant Kuaför
      * @return Bitiş zamanı
      */
-    public LocalDateTime calculateEndTime(LocalDateTime startTime, Service service, Tenant tenant) {
+    public LocalDateTime calculateEndTime(LocalDateTime startTime, com.example.barber.automation.entity.Service service, Tenant tenant) {
         return startTime.plusMinutes(service.getDurationMinutes());
     }
     
@@ -137,8 +136,8 @@ public class SmartSchedulingService {
      * @param endDate Bitiş tarihi
      * @return Tarih ve uygun saatlerin map'i
      */
-    public List<TimeSlotInfo> getAvailableTimeSlotsForDateRange(Tenant tenant, Service service, 
-                                                               LocalDate startDate, LocalDate endDate) {
+        public List<TimeSlotInfo> getAvailableTimeSlotsForDateRange(Tenant tenant, com.example.barber.automation.entity.Service service, 
+                                                                LocalDate startDate, LocalDate endDate) {
         List<TimeSlotInfo> result = new ArrayList<>();
         
         LocalDate currentDate = startDate;

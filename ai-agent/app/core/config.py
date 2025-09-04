@@ -1,11 +1,16 @@
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
 
 class Settings:
     def __init__(self) -> None:
-        # Load .env once at startup
-        load_dotenv()
+        # .env dosyasını esnek şekilde yükle (ai-agent klasörü dışında da arar)
+        dotenv_path = find_dotenv(filename=".env", usecwd=True)
+        if dotenv_path and os.path.exists(dotenv_path):
+            load_dotenv(dotenv_path)
+        else:
+            # Varsayılan davranış (çalıştığı klasörde .env varsa)
+            load_dotenv()
         
         # OpenAI API key - sadece environment'dan al
         self.openai_api_key: str | None = os.getenv("OPENAI_API_KEY")

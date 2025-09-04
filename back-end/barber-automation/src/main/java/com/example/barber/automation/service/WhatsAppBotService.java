@@ -18,6 +18,10 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -68,7 +72,7 @@ public class WhatsAppBotService {
     /**
      * Raw body'den gelen WhatsApp mesajını işle
      */
-    public void processIncomingMessage(String rawBody) {
+    public void processIncomingMessage(String rawBody, Long tenantId) {
         try {
             logger.info("Raw body işleniyor: {}", rawBody);
             
@@ -80,7 +84,7 @@ public class WhatsAppBotService {
                 logger.info("Mesaj parse edildi - From: {}, Text: {}", fromNumber, messageText);
                 
                 // Bot session'ı bul veya oluştur
-                BotSession session = getOrCreateSession(fromNumber, 1L); // Varsayılan tenant ID
+                BotSession session = getOrCreateSession(fromNumber, tenantId);
                 
                 // Mesajı işle
                 processMessage(session, messageText);
@@ -418,6 +422,19 @@ public class WhatsAppBotService {
                     String barberSelection = (String) extractedInfo.get("barber_selection");
                     int barberIndex = Integer.parseInt(barberSelection) - 1;
                     
+                    // Öncelik: AI'den gelen gerçek seçenekler
+                    if (extractedInfo.containsKey("barber_options")) {
+                        java.util.List<java.util.Map<String, Object>> options = (java.util.List<java.util.Map<String, Object>>) extractedInfo.get("barber_options");
+                        if (barberIndex >= 0 && barberIndex < options.size()) {
+                            Long selectedId = ((Number) options.get(barberIndex).get("id")).longValue();
+                            session.setSelectedTenantId(selectedId);
+                            session.setState(BotState.AWAITING_NAME);
+                            logger.info("Kuaför seçildi (AI options): ID={}", selectedId);
+                            sendMessage(session, "✅ Kuaför seçildi! Şimdi adınızı öğrenebilir miyim? 😊");
+                            return;
+                        }
+                    }
+
                     if (session.getAvailableBarbers() != null && barberIndex >= 0 && barberIndex < session.getAvailableBarbers().size()) {
                         TenantDto selectedBarber = session.getAvailableBarbers().get(barberIndex);
                         session.setSelectedTenantId(selectedBarber.getId());
@@ -448,11 +465,9 @@ public class WhatsAppBotService {
                 session.setSelectedLocation(location);
                 logger.info("Konum seçildi: {}", session.getSelectedLocation());
                 
-                // Konum bazlı kuaförleri listele (mesaj gönderme işlemi burada yapılacak)
-                listBarbersByLocation(location, session);
-                
-                // AI Agent'ın yanıtını gönderme (çünkü listBarbersByLocation zaten mesaj gönderiyor)
-                return;
+                // AI tabanlı akışta kuaför listeleme yanıtı AI tarafından üretilecek.
+                // Bu nedenle burada ekstra bir manuel listeleme yapılmıyor.
+                logger.info("Konum AI akışına iletildi, kuaför listeleme yanıtı AI tarafından verilecek");
             }
             if (extractedInfo.containsKey("date_preference")) {
                 try {
@@ -645,159 +660,42 @@ public class WhatsAppBotService {
     }
     
     /**
-     * Mesajı işle (AI Agent yanıt vermezse)
+     * Mesajı işle (Sadece AI Agent ile)
      */
     private void processMessage(BotSession session, String messageText) {
-        logger.info("Manual flow ile mesaj işleniyor: session={}, message={}", session.getPhoneNumber(), messageText);
+        logger.info("AI Agent ile mesaj işleniyor: session={}, message={}", session.getPhoneNumber(), messageText);
         
-        // Manuel akış - AI Agent'a bağımlı olmadan
-        processManualFlow(session, messageText);
-    }
-    
-    private void processManualFlow(BotSession session, String messageText) {
-        String lowerMessage = messageText.toLowerCase().trim();
-        
-        switch (session.getState()) {
-            case INITIAL:
-                // İlk mesaj - lokasyon sor
-                sendMessage(session, "Merhaba! 👋 Randevu almak için önce hangi şehir veya ilçede hizmet almak istediğinizi belirtin:");
-                session.setState(BotState.AWAITING_LOCATION);
-                break;
-                
-            case AWAITING_LOCATION:
-                // Lokasyon seçildi - kuaförleri listele
-                session.setSelectedLocation(messageText);
-                listBarbersByLocation(messageText, session);
-                session.setState(BotState.AWAITING_BARBER_SELECTION);
-                break;
-                
-            case AWAITING_BARBER_SELECTION:
-                // Kuaför seçildi
-                handleBarberSelection(session, messageText);
-                break;
-                
-            case AWAITING_NAME:
-                // İsim alındı
-                handleNameInput(session, messageText);
-                break;
-                
-            case AWAITING_SERVICE:
-                // Hizmet seçildi
-                handleServiceSelection(session, messageText);
-                break;
-                
-            case AWAITING_DATE:
-                // Tarih seçildi
-                handleDateSelection(session, messageText);
-                break;
-                
-            case AWAITING_TIME:
-                // Saat seçildi
-                handleTimeSelection(session, messageText);
-                break;
-                
-            case AWAITING_CONFIRMATION:
-                // Onay
-                handleConfirmation(session, messageText);
-                break;
-                
-            default:
-                session.setState(BotState.INITIAL);
-                processManualFlow(session, messageText);
-                break;
-        }
-    }
-    
-    /**
-     * Kuaför seçimini işle
-     */
-    private void handleBarberSelection(BotSession session, String messageText) {
         try {
-            // Mesajdan kuaför numarasını çıkar
-            int barberIndex = Integer.parseInt(messageText.trim()) - 1;
-            
-            if (barberIndex >= 0 && barberIndex < session.getAvailableBarbers().size()) {
-                TenantDto selectedBarber = session.getAvailableBarbers().get(barberIndex);
-                session.setSelectedBarberId(selectedBarber.getId());
-                session.setState(BotState.AWAITING_NAME);
-                
-                sendMessage(session, 
-                    "✅ " + selectedBarber.getName() + " seçildi! 💇‍♂️\n\n" +
-                    "Şimdi adınızı öğrenebilir miyim? 😊"
-                );
-            } else {
-                sendMessage(session, "❌ Geçersiz kuaför numarası. Lütfen listeden bir numara seçin.");
-            }
-        } catch (NumberFormatException e) {
-            sendMessage(session, "❌ Lütfen sadece numara yazın.");
-        }
-    }
-    
-    /**
-     * Konum bazlı kuaförleri listele
-     */
-    public void listBarbersByLocation(String location, BotSession session) {
-        try {
-            // Konum bilgisini parse et (şehir, ilçe)
-            String[] locationParts = location.split(",");
-            String city = locationParts[0].trim();
-            String district = locationParts.length > 1 ? locationParts[1].trim() : null;
-            
-            // Kuaförleri getir
-            List<TenantDto> barbers;
-            if (district != null && !district.isEmpty()) {
-                barbers = tenantService.findByCityAndDistrictDto(city, district);
-        } else {
-                barbers = tenantService.findByCityDto(city);
-            }
-            
-            if (barbers.isEmpty()) {
-                sendMessage(session, 
-                    "😔 " + location + " bölgesinde aktif kuaför bulunamadı.\n\n" +
-                    "Başka bir bölge deneyebilir misiniz? 🏠"
-                );
+            // AI Agent ile akıllı mesaj işleme
+            Tenant tenant = tenantService.findEntityById(session.getTenantId()).orElse(null);
+            if (tenant == null) {
+                logger.error("Tenant bulunamadı: {}", session.getTenantId());
+                sendMessage(session, "❌ Sistem hatası. Lütfen daha sonra tekrar deneyin.");
                 return;
             }
             
-            // Kuaförleri listele
-            StringBuilder barberList = new StringBuilder();
-            barberList.append("🏠 ").append(location).append(" bölgesindeki kuaförlerimiz:\n\n");
+            String aiResponse = processWithAI(session, messageText, tenant);
             
-            for (int i = 0; i < barbers.size(); i++) {
-                TenantDto barber = barbers.get(i);
-                barberList.append((i + 1)).append("️⃣ ").append(barber.getName()).append("\n");
-                if (barber.getAddress() != null) {
-                    barberList.append("📍 ").append(barber.getAddress()).append("\n");
-                }
-                barberList.append("\n");
+            if (aiResponse != null && !aiResponse.trim().isEmpty()) {
+                logger.info("AI Agent yanıt verdi: {}", aiResponse);
+                sendMessage(session, aiResponse);
+            } else {
+                logger.error("AI Agent yanıt vermedi - sistem hatası");
+                sendMessage(session, "❌ Üzgünüm, şu anda bir teknik sorun yaşıyorum. Lütfen daha sonra tekrar deneyin.");
             }
-            
-            barberList.append("Hangi kuaförü seçmek istiyorsunuz? Numarasını yazın:");
-            
-            // Session'a kuaförleri kaydet
-            session.setAvailableBarbers(barbers);
-            session.setState(BotState.AWAITING_BARBER_SELECTION);
-            
-            sendMessage(session, barberList.toString());
-            
         } catch (Exception e) {
-            logger.error("Konum bazlı kuaför listeleme hatası: {}", e.getMessage());
-            sendMessage(session, "❌ Bir hata oluştu. Lütfen tekrar deneyin.");
+            logger.error("AI Agent ile mesaj işlenirken hata oluştu", e);
+            sendMessage(session, "❌ Üzgünüm, şu anda bir teknik sorun yaşıyorum. Lütfen daha sonra tekrar deneyin.");
         }
     }
     
-    private void handleGreeting(BotSession session) {
-        String welcomeMessage = String.format(
-            "Merhaba! 👋 Randevu sistemimize hoş geldiniz.\n\n" +
-            "Size nasıl yardımcı olabilirim?\n\n" +
-            "1️⃣ Randevu almak için 'randevu' yazın\n" +
-            "2️⃣ Hizmetlerimizi görmek için 'hizmetler' yazın\n" +
-            "3️⃣ Randevu iptal için 'iptal' yazın\n\n" +
-            "Herhangi bir sorunuz varsa doğrudan mesaj atabilirsiniz! 😊"
-        );
-        
-        sendMessage(session, welcomeMessage);
-    }
+    // Manuel flow metodları kaldırıldı - artık sadece AI Agent kullanılıyor
+    
+    // Manuel flow metodları kaldırıldı - artık sadece AI Agent kullanılıyor
+    
+    // Manuel flow metodları kaldırıldı - artık sadece AI Agent kullanılıyor
+    
+    // Manuel flow metodları kaldırıldı - artık sadece AI Agent kullanılıyor
     
     private void handleServiceInquiry(BotSession session) {
         String servicesText = serviceService.getServicesForWhatsApp(session.getTenantId());
@@ -1032,8 +930,8 @@ public class WhatsAppBotService {
                 session.reset();
             }
         } else {
-            // Genel yardım mesajı
-            handleGreeting(session);
+            // Genel yardım mesajını basitçe ilet (AI akışı esas alınır)
+            sendMessage(session, "Merhaba! Nasıl yardımcı olabilirim? 😊");
         }
     }
     
@@ -1152,6 +1050,7 @@ public class WhatsAppBotService {
     private enum BotState {
         INITIAL,
         AWAITING_LOCATION,
+        AWAITING_DISTRICT_SELECTION,
         AWAITING_BARBER_SELECTION,
         AWAITING_BARBER,
         AWAITING_NAME,
@@ -1178,6 +1077,7 @@ public class WhatsAppBotService {
         private Long selectedTenantId; // Seçilen kuaför ID'si
         private Long selectedBarberId; // Seçilen kuaför ID'si (alias)
         private List<TenantDto> availableBarbers; // Mevcut kuaförler listesi
+        private List<String> availableDistricts; // Mevcut ilçeler listesi
         private String barberList; // Kuaför listesi metni
         
         public BotSession(String phoneNumber, Long tenantId) {
@@ -1235,6 +1135,14 @@ public class WhatsAppBotService {
          public void setBarberList(String barberList) { this.barberList = barberList; }
          
          // Session key oluştur
+         public List<String> getAvailableDistricts() {
+             return availableDistricts;
+         }
+         
+         public void setAvailableDistricts(List<String> availableDistricts) {
+             this.availableDistricts = availableDistricts;
+         }
+         
          public String getSessionKey() {
              return phoneNumber + "_" + tenantId;
          }

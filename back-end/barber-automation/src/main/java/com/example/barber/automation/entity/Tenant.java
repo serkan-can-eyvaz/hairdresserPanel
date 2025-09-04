@@ -64,7 +64,7 @@ public class Tenant {
     @Column(length = 10)
     private String workingHoursEnd = "22:00"; // Bitiş saati (HH:MM formatında)
     
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Integer breakMinutes = 10; // Randevular arası mola süresi (dakika)
     
     @Column(nullable = false)
