@@ -1,6 +1,6 @@
 # Kuaför Otomasyon Sistemi
 
-Bu proje, kuaförler için WhatsApp tabanlı randevu otomasyon sistemi sağlar. AI destekli chatbot ile müşteriler kolayca randevu alabilir ve kuaförler randevularını yönetebilir.
+Bu proje , kuaförler için WhatsApp tabanlı randevu otomasyon sistemi sağlar. AI destekli chatbot ile müşteriler kolayca randevu alabilir ve kuaförler randevularını yönetebilir.
 
 ## 🚀 Özellikler
 
